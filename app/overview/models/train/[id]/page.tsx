@@ -14,15 +14,17 @@ import { FC } from 'react';
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }> | { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 interface TrainModelPageProps extends PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }> | { id: string };
 }
 
-export default function TrainModelPage({ params }: TrainModelPageProps) {
+export default async function TrainModelPage(props: TrainModelPageProps) {
+  // Handle params whether it's a Promise or a direct object
+  const params = props.params instanceof Promise ? await props.params : props.params;
   
   return (
     <div className="w-full max-w-2xl mx-auto">

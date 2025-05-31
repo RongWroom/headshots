@@ -13,11 +13,13 @@ import { FaArrowLeft } from "react-icons/fa";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }> | { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default async function Index({ params }: PageProps) {
+export default async function Index(props: PageProps) {
+  // Handle params whether it's a Promise or a direct object
+  const params = props.params instanceof Promise ? await props.params : props.params;
   const supabase = createServerComponentClient<Database>({ cookies });
   const {
     data: { user },
