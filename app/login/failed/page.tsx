@@ -2,18 +2,22 @@
 import { LoginFail } from "./components/LoginFail";
 import type { Metadata } from 'next';
 
-interface Props {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
 export const metadata: Metadata = {
   title: 'Login Failed',
   description: 'Login failed. Please try again.',
 };
 
-export default async function LoginFailedPage({
-    searchParams,
-}: Props) {
+interface PageProps {
+  params: { [key: string]: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  params: { [key: string]: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
 
     let errorMessage = "Something went wrong, please reach out to support.";
 
