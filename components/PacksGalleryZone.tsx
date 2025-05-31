@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Progress } from "./ui/progress";
 import { Loader2 } from "lucide-react";
 
-interface Pack {
+interface Model {
   id: string;
   title: string;
   cover_url: string;
@@ -14,67 +14,73 @@ interface Pack {
 }
 
 export default function PacksGalleryZone() {
-  const [packs, setPacks] = useState<Pack[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchPacks = async (): Promise<void> => {
+  const fetchModels = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await axios.get<Pack[]>('/astria/packs');
-      setPacks(response.data);
+      const response = await axios.get<Model[]>('/api/replicate/models');
+      setModels(response.data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        toast({
-          title: "Error fetching packs",
-          description: err.message,
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: "Unknown error",
-          description: "An unknown error occurred.",
-          duration: 5000,
-        });
-      }
+      const error = err as Error;
+      toast({
+        title: "Error fetching models",
+        description: error.message,
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPacks();
+    fetchModels();
   }, []);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin mb-4" />
-        <Progress className="w-64" />
-        <p className="mt-4 text-sm text-gray-500">Loading packs...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading models...</p>
       </div>
     );
   }
 
-  if (packs.length === 0) {
+  if (models.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-lg text-gray-500">No packs available.</p>
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-muted-foreground">No models available</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {packs.map((pack) => (
-        <Link href={`/overview/models/train/${pack.slug}`} key={pack.id} className="w-full h-70 bg-black rounded-md overflow-hidden transition-transform duration-300 hover:scale-105">
-          <img
-            src={pack.cover_url ?? "https://www.astria.ai/assets/logo-b4e21f646fb5879eb91113a70eae015a7413de8920960799acb72c60ad4eaa99.png"}
-            alt={pack.title}
-            className="w-full h-4/5 object-cover"
-          />
-          <div className="text-white w-full p-3 text-md font-bold text-center capitalize leading-tight">
-            {pack.title}
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {models.map((model) => (
+        <Link
+          key={model.id}
+          href={`/models/${model.slug}`}
+          className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 transition-all hover:shadow-lg"
+        >
+          <div className="aspect-square overflow-hidden">
+            <img
+              alt={model.title}
+              className="h-full w-full object-cover transition-all group-hover:scale-105"
+              src={model.cover_url}
+              style={{
+                aspectRatio: "1/1",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+          <div className="p-4">
+            <h3 className="font-semibold text-lg">{model.title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              AI Model for generating headshots
+            </p>
           </div>
         </Link>
       ))}

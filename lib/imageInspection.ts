@@ -21,17 +21,47 @@ export interface ImageInspectionResult {
 }
 
 export async function inspectImage(file: File, type: string): Promise<ImageInspectionResult> {
-  const formData = new FormData();
-  formData.append('name', type);
-  formData.append('file', await resizeImage(file));
-
   try {
-    const response = await axios.post('/astria/inspect-image', formData, {
+    // First, upload the image to a temporary location
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadResponse = await axios.post('/api/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+
+    const imageUrl = uploadResponse.data.url;
+    
+    // Then, analyze the image using Replicate
+    const analysisResponse = await axios.post('/api/replicate/analyze-image', {
+      imageUrl,
+      analysisType: type
+    });
+
+    // Map Replicate's response to our expected format
+    const replicateData = analysisResponse.data;
+    
+    return {
+      age: replicateData.age,
+      blurry: replicateData.quality?.blurry || false,
+      ethnicity: replicateData.demographics?.ethnicity,
+      eye_color: replicateData.features?.eyes?.color,
+      facial_hair: replicateData.features?.facial_hair?.present ? 'yes' : 'no',
+      full_body_image_or_longshot: replicateData.composition?.full_body || false,
+      funny_face: replicateData.expression?.funny || false,
+      glasses: replicateData.accessories?.glasses ? 'yes' : 'no',
+      hair_color: replicateData.features?.hair?.color,
+      hair_length: replicateData.features?.hair?.length,
+      hair_style: replicateData.features?.hair?.style,
+      includes_multiple_people: replicateData.detection?.people_count > 1,
+      is_bald: replicateData.features?.hair?.bald ? 'yes' : 'no',
+      selfie: replicateData.composition?.is_selfie || false,
+      wearing_hat: replicateData.accessories?.hat || false,
+      wearing_sunglasses: replicateData.accessories?.sunglasses || false,
+    };
+    
   } catch (error) {
     console.error('Image inspection failed:', error);
     throw error;
