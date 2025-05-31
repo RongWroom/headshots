@@ -6,9 +6,9 @@ import { Login } from "./components/Login";
 
 export const dynamic = "force-dynamic";
 
-// Define PageProps to match the error message's expectation
+// Define PageProps to match the error message's expectation, but make searchParams optional
 interface PageProps {
-  searchParams: Promise<any>; // Explicitly type as Promise<any>
+  searchParams?: Promise<any>; // Make searchParams optional
 }
 
 export default async function LoginPage(props: PageProps) {
