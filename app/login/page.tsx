@@ -6,11 +6,12 @@ import { Login } from "./components/Login";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage({
-  searchParams,
-}: {
+type PageProps = {
+  params: { [key: string]: string };
   searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+};
+
+export default async function LoginPage({ searchParams }: PageProps) {
   const supabase = createServerComponentClient<Database>({ cookies });
 
   const {
@@ -22,7 +23,7 @@ export default async function LoginPage({
   }
 
   const headersList = headers();
-  const host = headersList.get("host");
+  const host = (await headersList).get("host");
 
   return (
     <div className="flex flex-col flex-1 w-full h-[calc(100vh-73px)]">
