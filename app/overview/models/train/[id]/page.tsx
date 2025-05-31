@@ -13,9 +13,13 @@ import { FC } from 'react';
 
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
-interface TrainModelPageProps {
+interface PageProps {
   params: { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+interface TrainModelPageProps extends PageProps {
+  params: { id: string };
 }
 
 export default function TrainModelPage({ params }: TrainModelPageProps) {

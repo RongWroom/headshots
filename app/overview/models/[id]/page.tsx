@@ -12,8 +12,12 @@ import { FaArrowLeft } from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
 
-// Fix: Use the correct parameter name 'pack' to match your file structure
-export default async function Index(props: { params: Promise<{ pack: string }> }) {
+interface PageProps {
+  params: { id: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function Index({ params }: PageProps) {
   const supabase = createServerComponentClient<Database>({ cookies });
   const {
     data: { user },
@@ -23,13 +27,10 @@ export default async function Index(props: { params: Promise<{ pack: string }> }
     return <Login />;
   }
 
-  // Fix: Access 'pack' parameter instead of 'id'
-  const resolvedParams = await props.params;
-  
   const { data: model } = await supabase
     .from("models")
     .select("*")
-    .eq("id", Number(resolvedParams.pack)) // Use pack instead of id
+    .eq("id", Number(params.id))
     .eq("user_id", user.id)
     .single();
 
