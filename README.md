@@ -1,3 +1,6 @@
+> This project was originally based on [astriaai/headshots-starter](https://github.com/astriaai/headshots-starter).  
+> Modified for personal use by Dan Dan Photography.
+
 # 👨‍💼 [Headshot AI](https://headshots-starter.vercel.app/) - Professional Headshots with AI (powered by Astria.ai)
 
 Introducing Headshot AI, an open-source project from [Astria](https://www.astria.ai/) that generates Professional AI Headshots in minutes.
