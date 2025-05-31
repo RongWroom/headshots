@@ -13,12 +13,12 @@ import { FC } from 'react';
 
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
-interface PageProps {
+interface TrainModelPageProps {
   params: { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default function TrainModelPage({ params }: { params: { id: string } }) {
+export default function TrainModelPage({ params }: TrainModelPageProps) {
   
   return (
     <div className="w-full max-w-2xl mx-auto">
