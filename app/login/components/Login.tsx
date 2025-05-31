@@ -17,7 +17,7 @@ type Inputs = {
 
 interface LoginProps {
   host: string | null;
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Record<string, string>;
 }
 
 export const Login = ({
