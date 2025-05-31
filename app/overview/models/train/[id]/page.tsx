@@ -13,18 +13,15 @@ import { FC } from 'react';
 
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
-interface PageProps {
-  params: Promise<{ id: string }> | { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
-interface TrainModelPageProps extends PageProps {
-  params: Promise<{ id: string }> | { id: string };
-}
-
-export default async function TrainModelPage(props: TrainModelPageProps) {
-  // Handle params whether it's a Promise or a direct object
-  const params = props.params instanceof Promise ? await props.params : props.params;
+// No need for extending PageProps since we're directly using its type
+export default async function TrainModelPage(props: PageProps) {
+  // Await params to get the actual object
+  const params = await props.params;
   
   return (
     <div className="w-full max-w-2xl mx-auto">
