@@ -9,20 +9,16 @@ import {
 } from "@/components/ui/card";
 import Link from "next/link";
 import { FaArrowLeft } from "react-icons/fa";
-import type { Metadata } from 'next';
+import { FC } from 'react';
 
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
-type Props = {
+interface PageProps {
   params: { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
-};
+}
 
-export const metadata: Metadata = {
-  title: 'Train Model',
-};
-
-export default async function TrainModelPage({ params }: Props) {
+export default function TrainModelPage({ params }: { params: { id: string } }) {
   
   return (
     <div className="w-full max-w-2xl mx-auto">
