@@ -6,10 +6,9 @@ import { Login } from "./components/Login";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  params: { [key: string]: string };
+interface PageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
-};
+}
 
 export default async function LoginPage({ searchParams }: PageProps) {
   const supabase = createServerComponentClient<Database>({ cookies });
