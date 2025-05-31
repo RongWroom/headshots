@@ -12,7 +12,12 @@ import { FaArrowLeft } from "react-icons/fa";
 
 const packsIsEnabled = process.env.NEXT_PUBLIC_TUNE_TYPE === "packs";
 
-export default async function Index({ params }: { params: { pack : string } }) {
+interface PageProps {
+  params: { id: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function Index({ params }: PageProps) {
   
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -34,7 +39,7 @@ export default async function Index({ params }: { params: { pack : string } }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            <TrainModelZone packSlug={params.pack} />
+            <TrainModelZone packSlug={params.id} />
           </CardContent>
         </Card>
       </div>
