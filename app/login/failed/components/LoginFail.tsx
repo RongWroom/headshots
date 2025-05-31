@@ -1,11 +1,13 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 
+interface LoginFailProps {
+    errorMessage: string | null;
+}
+
 export const LoginFail = ({
     errorMessage,
-}: {
-    errorMessage: string | null;
-}) => {
+}: LoginFailProps) => {
     return (
         <div className="flex justify-center p-8">
             <div className="flex flex-col gap-4 bg-neutral-50 dark:bg-neutral-900 p-4 rounded-md max-w-sm w-full mt-10">

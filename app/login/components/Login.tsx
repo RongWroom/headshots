@@ -15,13 +15,15 @@ type Inputs = {
   email: string;
 };
 
+interface LoginProps {
+  host: string | null;
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
 export const Login = ({
   host,
   searchParams,
-}: {
-  host: string | null;
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) => {
+}: LoginProps) => {
   const supabase = createClientComponentClient<Database>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
