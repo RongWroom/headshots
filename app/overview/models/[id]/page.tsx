@@ -12,8 +12,8 @@ import { FaArrowLeft } from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
 
-// Update function signature to use a type that includes Promise<any> for params
-export default async function Index(props: { params: Promise<any> }) { // Explicitly type params as Promise<any>
+// Fix: Use the correct parameter name 'pack' to match your file structure
+export default async function Index(props: { params: Promise<{ pack: string }> }) {
   const supabase = createServerComponentClient<Database>({ cookies });
   const {
     data: { user },
@@ -23,13 +23,13 @@ export default async function Index(props: { params: Promise<any> }) { // Explic
     return <Login />;
   }
 
-  // Add type assertion to access params
-  const resolvedParams = await props.params as { id: string }; // Await and assert type
-
+  // Fix: Access 'pack' parameter instead of 'id'
+  const resolvedParams = await props.params;
+  
   const { data: model } = await supabase
     .from("models")
     .select("*")
-    .eq("id", Number(resolvedParams.id)) // Use resolvedParams
+    .eq("id", Number(resolvedParams.pack)) // Use pack instead of id
     .eq("user_id", user.id)
     .single();
 
