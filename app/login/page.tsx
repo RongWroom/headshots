@@ -6,14 +6,15 @@ import { Login } from "./components/Login";
 
 export const dynamic = "force-dynamic";
 
-type SearchParamValue = string | string[] | undefined;
-type SearchParams = Record<string, SearchParamValue>;
+// Remove custom type definitions
+// type SearchParamValue = string | string[] | undefined;
+// type SearchParams = Record<string, SearchParamValue>;
+// interface PageProps {
+//   searchParams: SearchParams;
+// }
 
-interface PageProps {
-  searchParams: SearchParams;
-}
-
-export default async function LoginPage(props: PageProps) {
+// Update function signature to use inline typing
+export default async function LoginPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
   const supabase = createServerComponentClient<Database>({ cookies });
 
   const {
@@ -28,20 +29,20 @@ export default async function LoginPage(props: PageProps) {
   const host = headersList.get("host");
 
   // Extract only the expected search parameters
-  const searchParams: Record<string, string> = {};
-  if (props.searchParams) {
-    for (const [key, value] of Object.entries(props.searchParams)) {
+  const searchParamsRecord: Record<string, string> = {};
+  if (searchParams) { // Use the searchParams from the function arguments
+    for (const [key, value] of Object.entries(searchParams)) {
       if (typeof value === 'string') {
-        searchParams[key] = value;
+        searchParamsRecord[key] = value;
       } else if (Array.isArray(value) && value.length > 0) {
-        searchParams[key] = value[0];
+        searchParamsRecord[key] = value[0];
       }
     }
   }
 
   return (
     <div className="flex flex-col flex-1 w-full h-[calc(100vh-73px)]">
-      <Login host={host} searchParams={searchParams} />
+      <Login host={host} searchParams={searchParamsRecord} />
     </div>
   );
 }
