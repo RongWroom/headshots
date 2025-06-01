@@ -8,19 +8,11 @@ export const dynamic = "force-dynamic";
 
 // Define PageProps to match the error message's expectation, but make searchParams optional
 interface PageProps {
-  searchParams?: { [key: string]: string | string[] | undefined; }; // Make searchParams optional
+  searchParams?: Promise<any>; // Make searchParams optional
 }
 
-import fs from 'fs/promises'; // Import fs for logging
-
 export default async function LoginPage(props: PageProps) {
-  // Log searchParams to a temporary file
-  try {
-    await fs.appendFile('/tmp/searchParams.log', JSON.stringify(props.searchParams) + '\n');
-  } catch (error) {
-    console.error('Failed to log searchParams:', error);
-  }
-
+  const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
   const cookieStore = cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,8 +50,8 @@ export default async function LoginPage(props: PageProps) {
   const searchParamsRecord: Record<string, string> = {};
   // We need to cast or assert the type to be able to access its properties
 
-  if (props.searchParams) {
-    for (const [key, value] of Object.entries(props.searchParams)) {
+  if (resolvedSearchParams) {
+    for (const [key, value] of Object.entries(resolvedSearchParams)) {
       if (typeof value === 'string') {
         searchParamsRecord[key] = value;
       } else if (Array.isArray(value) && value.length > 0) {
