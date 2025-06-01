@@ -14,7 +14,8 @@ import CTASection from "@/components/homepage/CTASection"
 export const dynamic = "force-dynamic"
 
 export default async function Index() {
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
   const {
     data: { user },

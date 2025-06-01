@@ -40,7 +40,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link 
-                  href="https://github.com/astriaai/headshots-starter" 
+                  href="https://github.com/your-username/headshots-ai" 
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   target="_blank"
                 >
@@ -49,7 +49,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  href="https://docs.astria.ai/docs/api/pack/pack/" 
+                  href="https://replicate.com/docs" 
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   target="_blank"
                 >
@@ -58,7 +58,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  href="https://twitter.com/Astria_AI" 
+                  href="https://twitter.com/replicate" 
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   target="_blank"
                 >
@@ -72,7 +72,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link 
-                  href="mailto:support@astria.ai" 
+                  href="mailto:your.email@example.com" 
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Contact
@@ -92,19 +92,19 @@ export default function Footer() {
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Headshots AI. All rights reserved.
+            {new Date().getFullYear()} Headshots AI. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <p className="text-sm text-muted-foreground">
               Open-source powered by{" "}
               <Link
-                href="https://www.astria.ai/"
+                href="https://replicate.com/"
                 className="text-primary hover:underline"
                 target="_blank"
               >
-                Astria
+                Replicate
               </Link>
-              ,{" "}
+              , and{" "}
               <Link
                 href="https://supabase.com/"
                 className="text-primary hover:underline"

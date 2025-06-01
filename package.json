@@ -1,16 +1,18 @@
 {
-  "name": "headshots-ai-by-astria",
+  "name": "headshots-ai-by-replicate",
   "author": {
-    "name": "Astria",
-    "email": "support@astria.ai"
+    "name": "Dan Dan Photography",
+    "email": "your.email@example.com"
   },
+  "description": "Professional AI headshot generator powered by Replicate",
   "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "update-types": "npx supabase gen types typescript --project-id \"hzcgbsakzagvgfuektjb\" > types/supabase.ts"
+    "update-types": "npx supabase gen types typescript --project-id \"hzcgbsakzagvgfuektjb\" > types/supabase.ts",
+    "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.1",
@@ -32,7 +34,7 @@
     "@radix-ui/react-toast": "^1.1.4",
     "@radix-ui/react-tooltip": "^1.0.6",
     "@supabase/auth-helpers-nextjs": "^0.9.0",
-    "@supabase/supabase-js": "^2.40.0",
+    "@supabase/supabase-js": "^2.49.8",
     "@types/formidable": "^3.4.2",
     "@types/node-fetch": "^2.6.4",
     "@vercel/analytics": "^1.2.2",
