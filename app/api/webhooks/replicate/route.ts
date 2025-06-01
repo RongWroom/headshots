@@ -1,8 +1,12 @@
 // app/api/webhooks/replicate/route.ts
 import { NextResponse } from 'next/server'
 import { headers as nextHeaders } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client directly with service role key
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 interface WebhookPayload {
   type: string;
@@ -17,14 +21,13 @@ interface WebhookPayload {
 
 export async function POST(request: Request) {
   try {
-    // Log incoming request
     console.log('\n--- New Webhook Request ---')
     console.log('Time:', new Date().toISOString())
-    
+
     // Parse and validate request
     const payload: WebhookPayload = await request.json()
     console.log('Payload:', JSON.stringify(payload, null, 2))
-    
+
     const headersList = await nextHeaders()
     const signature = headersList.get('x-webhook-signature')
     console.log('Signature:', signature ? 'Present' : 'Missing')
@@ -48,37 +51,35 @@ export async function POST(request: Request) {
         return new NextResponse('Missing user ID', { status: 400 })
       }
 
-      const cookieStore = cookies()
-      const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
       try {
         if (modelType === 'user-model') {
           console.log('Updating user model with ID:', output?.model_id)
           const { data, error } = await supabase
             .from('user_models')
-            .update({
+            .upsert({
+              user_id: userId,
               model_id: output.model_id,
               status: 'trained',
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', userId)
             .select()
-          
+
           if (error) throw error
           console.log('User model update successful:', data)
-          
+
         } else if (modelType === 'final-style') {
           console.log('Updating generation with output URL:', output?.[0])
           const { data, error } = await supabase
             .from('generations')
-            .update({
+            .upsert({
+              id: predictionId,
+              user_id: userId,
               output_url: output[0],
               status: 'completed',
               updated_at: new Date().toISOString()
             })
-            .eq('id', predictionId)
             .select()
-          
+
           if (error) throw error
           console.log('Generation update successful:', data)
         }
@@ -89,23 +90,23 @@ export async function POST(request: Request) {
     }
 
     console.log('--- Webhook processed successfully ---\n')
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Webhook processed successfully',
       event: eventType,
       predictionId
     })
-    
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('Webhook error:', errorMessage)
     console.error('Error details:', error)
-    
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: errorMessage,
-        message: 'Failed to process webhook' 
+        message: 'Failed to process webhook'
       },
       { status: 400 }
     )
