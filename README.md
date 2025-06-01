@@ -54,6 +54,16 @@ The app is powered by:
 
 [![Headshot AI Explainer](/public/new-explainer.png)](https://replicate.com/)
 
+## Replicate Workflow
+
+This application uses a two-step Replicate AI model workflow to generate personalized headshots:
+
+1. **Train User-Specific Model**: Uses [`replicate/flux-fast-trainer`](https://replicate.com/replicate/flux-fast-trainer) to create a personalized model from 5-10 user uploaded images. This model captures the user's unique facial features and characteristics.
+
+2. **Apply Style**: Uses [`lucataco/flux-dev-multi-lora`](https://replicate.com/lucataco/flux-dev-multi-lora) to generate the final headshots by combining the user's personalized model with pre-trained style LoRAs.
+
+This workflow provides high-quality, customizable headshots with minimal input required from users, resulting in professional images across various styles.
+
 ## Running Locally
 
 To create your own Headshot AI app, follow these steps:
@@ -127,7 +137,12 @@ Redirect URL: https://headshots-starter.vercel.app/**
 - Go to [Replicate](https://replicate.com/) and sign up for an account.
 - Get your API key from [Replicate Account Settings](https://replicate.com/account/api-tokens)
 - Add your Replicate API token to your environment variables as `REPLICATE_API_TOKEN`
+  - Note: This replaces the previous `ASTRIA_API_KEY` if you're migrating from Astria
 - Fill in `your-blob-read-write-token` with your Vercel Blob token (steps below)
+
+This application uses two Replicate models:
+- `replicate/flux-fast-trainer` - For training a user-specific model
+- `lucataco/flux-dev-multi-lora` - For applying styles to the trained model
 
 If your production webhook callbacks do not seem to be working, make sure the callback URL is not of a Vercel dedicated branch deployment which requires authentication, in which case you will not see the callback in the logs.
 
@@ -243,28 +258,28 @@ For more information on how to improve quality, read the blog [here](https://blo
 
 ## Additional Use-Cases
 
-Headshot AI can be easily adapted to support many other use-cases of [Astria](https://www.astria.ai/) including:
+Headshot AI can be easily adapted to support many other use-cases of [Replicate](https://replicate.com/) including:
 
 - AI Avatars
   - [Anime](https://blog.tryleap.ai/transforming-images-into-anime-with-leap-ai/)
   - [Portraits](https://blog.tryleap.ai/ai-time-machine-images-a-glimpse-into-the-future-with-leap-ai/)
   - [Story Illustrations](https://blog.tryleap.ai/novel-ai-image-generator-using-leap-ai-a-comprehensive-guide/)
 
-[![Anime AI Demo](/public/anime.png)](https://www.astria.ai/gallery/packs)
+[![Anime AI Demo](/public/anime.png)](https://replicate.com/explore)
 
 - Pet Portraits
 
-[![Pet AI Demo](/public/pet.png)](https://www.astria.ai/gallery/packs)
+[![Pet AI Demo](/public/pet.png)](https://replicate.com/explore)
 
 - Product Shots
 - Food Photography
 
-[![Product AI Demo](/public/products.png)](https://www.astria.ai/)
+[![Product AI Demo](/public/products.png)](https://replicate.com/explore)
 
 - Icons
 - [Style-Consistent Assets](https://blog.tryleap.ai/how-to-generate-style-consistent-assets-finetuning-on-leap/)
 
-[![Icons AI Demo](/public/icons.png)](https://www.astria.ai/)
+[![Icons AI Demo](/public/icons.png)](https://replicate.com/explore)
 
 & more!
 
@@ -276,7 +291,7 @@ If you want to contribute to the codebase make sure you create a new branch and 
 
 ## Resources and Support
 
-- Help Email: support@astria.ai
+- Help Email: support@yourcompany.com
 
 ## License
 
