@@ -24,10 +24,18 @@ export const Login = ({
   host,
   searchParams,
 }: LoginProps) => {
+  // Initialize Supabase client with proper error handling
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+  
+  // Log Supabase initialization for debugging
+  console.log('Supabase client initialized with URL:', {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    // Don't log the full key for security reasons
+    keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
   const { toast } = useToast();
@@ -51,13 +59,27 @@ export const Login = ({
         });
         setIsMagicLinkSent(true);
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       setIsSubmitting(false);
+      console.error('Login error:', error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Please try again, if the problem persists, contact us at hello@tryleap.ai";
+      
+      if (error?.message) {
+        if (error.message.includes('rate limit')) {
+          errorMessage = "Too many attempts. Please wait a few minutes before trying again.";
+        } else if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "Invalid email address. Please check and try again.";
+        } else if (error.message.includes('Email link is invalid')) {
+          errorMessage = "The magic link is invalid or has expired. Please request a new one.";
+        }
+      }
+      
       toast({
-        title: "Something went wrong",
+        title: "Authentication Error",
         variant: "destructive",
-        description:
-          "Please try again, if the problem persists, contact us at hello@tryleap.ai",
+        description: errorMessage,
         duration: 5000,
       });
     }
@@ -85,6 +107,12 @@ export const Login = ({
   };
 
   const signInWithMagicLink = async (email: string) => {
+    console.log('Attempting to sign in with magic link', { 
+      email, 
+      redirectUrl,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL 
+    });
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -93,7 +121,14 @@ export const Login = ({
     });
 
     if (error) {
-      console.log(`Error: ${error.message}`);
+      console.error(`Authentication Error: ${error.message}`, error);
+      // Log additional details that might help debugging
+      console.error('Error details:', {
+        status: error.status,
+        name: error.name,
+        code: error?.code
+      });
+      throw error; // Make sure to throw the error so it can be caught by the try/catch block
     }
   };
 

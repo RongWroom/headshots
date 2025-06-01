@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isAuthApiError } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { CookieOptions } from "@supabase/ssr";
 
 export async function GET(req: NextRequest) {
   const requestUrl = new URL(req.url);
@@ -12,33 +13,71 @@ export async function GET(req: NextRequest) {
   const error_description = requestUrl.searchParams.get("error_description");
 
   if (error) {
-    console.log("error: ", {
+    console.error("Auth callback error: ", {
       error,
       error_description,
       code,
+      requestUrl: req.url
     });
+
+    // Redirect to a more specific error page based on the error
+    return NextResponse.redirect(`${requestUrl.origin}/login/failed?err=${error}&desc=${error_description || 'Unknown error'}`);
   }
 
+  // Create a response object that we'll modify as we go
+  let response = NextResponse.redirect(new URL(next, req.url));
+
   if (code) {
+    // Create a Supabase client with proper cookie handling for Next.js App Router
     const cookieStore = cookies();
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get: async (name: string) => {
-            const store = await cookieStore;
-            return store.get(name)?.value;
+          async get(name: string) {
+            // In App Router, we need to use the synchronous version
+            const cookie = (await cookieStore).get(name);
+            return cookie?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            // In App Router, we need to use the synchronous version
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            // In App Router, we need to use the synchronous version
+            response.cookies.set({
+              name,
+              value: "",
+              ...options,
+              maxAge: 0,
+            });
           },
         },
       }
     );
 
     try {
-      await supabase.auth.exchangeCodeForSession(code);
+      // Exchange the code for a session and log success/failure
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-      // ater exchanging the code, we should check if the user has a feature-flag row and a credits now, if not, we should create one
+      if (error) {
+        console.error("Failed to exchange code for session:", error);
+        return NextResponse.redirect(
+          `${requestUrl.origin}/login/failed?err=SessionExchangeError&desc=${error.message}`
+        );
+      }
 
+      console.log("Successfully exchanged code for session", {
+        session: data.session ? "Session established" : "No session",
+        user: data.user ? "User retrieved" : "No user"
+      });
+
+      // After exchanging the code, check if the user has a feature-flag row and credits
       const { data: user, error: userError } = await supabase.auth.getUser();
 
       if (userError || !user) {
@@ -66,7 +105,17 @@ export async function GET(req: NextRequest) {
         );
       }
     }
+
+    // Verify the session was established before redirecting
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.error("Session not established after code exchange");
+      return NextResponse.redirect(`${requestUrl.origin}/login/failed?err=NoSession`);
+    }
+
+    console.log("Authentication successful, redirecting to", next);
   }
 
-  return NextResponse.redirect(new URL(next, req.url));
+  return response; // Return the response with cookies set
 }
