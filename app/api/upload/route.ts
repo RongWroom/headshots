@@ -12,6 +12,10 @@ console.log(`Blob token status: ${blobToken ? 'Set' : 'Not Set'}, Length: ${toke
 export const runtime = 'edge';
 
 export async function POST(request: Request) {
+  // Debug: Log Blob token status
+  console.log('Blob token exists:', !!process.env.BLOB_READ_WRITE_TOKEN);
+  console.log('Blob token prefix:', process.env.BLOB_READ_WRITE_TOKEN?.slice(0, 17));
+  
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
