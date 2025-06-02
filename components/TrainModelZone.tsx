@@ -234,11 +234,14 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
         try {
           // Get the file and its name
           const file = item.file;
-          const fileName = encodeURIComponent(file.name);
+          // Replace spaces with underscores and encode the filename
+          const safeFilename = file.name.replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
+          const fileName = encodeURIComponent(safeFilename);
           
-          console.log('Starting file upload:', file.name, 'Size:', file.size, 'Type:', file.type);
+          console.log('Starting file upload:', file.name, 'Safe filename:', safeFilename, 'Size:', file.size, 'Type:', file.type);
           
           // Use the server endpoint with filename as query parameter
+          console.log('Upload URL:', `/api/upload?filename=${fileName}`);
           const response = await fetch(`/api/upload?filename=${fileName}`, {
             method: 'POST',
             body: file, // Send the file directly as the request body
