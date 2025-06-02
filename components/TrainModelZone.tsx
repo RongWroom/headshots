@@ -236,6 +236,8 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
           const file = item.file;
           const fileName = encodeURIComponent(file.name);
           
+          console.log('Starting file upload:', file.name, 'Size:', file.size, 'Type:', file.type);
+          
           // Use the server endpoint with filename as query parameter
           const response = await fetch(`/api/upload?filename=${fileName}`, {
             method: 'POST',
@@ -245,10 +247,34 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
             },
           });
           
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to upload file');
+          const responseText = await response.text();
+          let errorData;
+          
+          try {
+            errorData = responseText ? JSON.parse(responseText) : {};
+          } catch (e) {
+            console.error('Failed to parse error response:', e);
+            errorData = { rawResponse: responseText };
           }
+          
+          if (!response.ok) {
+            console.error('Upload failed:', {
+              status: response.status,
+              statusText: response.statusText,
+              errorData,
+              headers: Object.fromEntries(response.headers.entries())
+            });
+            
+            const errorMessage = errorData.message || 
+                             errorData.error || 
+                             `HTTP ${response.status}: ${response.statusText}`;
+            
+            throw new Error(`Upload failed: ${errorMessage}`);
+          }
+          
+          // If we get here, the upload was successful
+          console.log('Upload successful for file:', file.name);
+          return errorData; // This is actually the success response
           
           return response.json();
         } catch (error) {
