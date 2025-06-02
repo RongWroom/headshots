@@ -336,9 +336,9 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
                   <Image
                     src={url}
                     alt={`Example ${index + 1} for ${currentPack.title}`}
-                    layout="fill"
-                    objectFit="cover"
-                    className="bg-gray-100"
+                    width={300}
+                    height={300}
+                    priority
                   />
                 </div>
               ))}
@@ -445,7 +445,7 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
                           alt={`Preview ${index + 1}`}
                           width={100}
                           height={100}
-                          className="rounded-md object-cover h-24 w-24"
+                          priority
                         />
                         <button
                           type="button"
