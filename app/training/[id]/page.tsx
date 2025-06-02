@@ -1,5 +1,11 @@
 import TrainingStatusClient from './TrainingStatusClient';
 
-export default function TrainingStatusPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function TrainingStatusPage({ params }: PageProps) {
   return <TrainingStatusClient trainingId={params.id} />;
 }
