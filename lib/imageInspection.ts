@@ -32,6 +32,10 @@ export async function inspectImage(file: File, type: string): Promise<ImageInspe
       },
     });
 
+    if (!uploadResponse.data?.url) {
+      throw new Error('Failed to upload image: No URL returned');
+    }
+
     const imageUrl = uploadResponse.data.url;
     
     // Then, analyze the image using Replicate
@@ -40,31 +44,68 @@ export async function inspectImage(file: File, type: string): Promise<ImageInspe
       analysisType: type
     });
 
-    // Map Replicate's response to our expected format
-    const replicateData = analysisResponse.data;
+    // Log the full response for debugging
+    console.log('Analysis response:', analysisResponse.data);
+
+    // Extract the analysis text from the response
+    const analysisText = analysisResponse.data.analysis?.join(' ') || '';
     
+    // Simple heuristic checks based on the analysis text
+    const isSelfie = analysisText.toLowerCase().includes('selfie') || 
+                    analysisText.toLowerCase().includes('self-portrait');
+    const isBlurry = analysisText.toLowerCase().includes('blur') || 
+                    analysisText.toLowerCase().includes('unclear');
+    const hasMultiplePeople = (analysisText.match(/person|people|faces?/gi) || []).length > 1;
+    const isFullBody = analysisText.toLowerCase().includes('full body') || 
+                      analysisText.toLowerCase().includes('full-body');
+    const hasSunglasses = analysisText.toLowerCase().includes('sunglasses') || 
+                         analysisText.toLowerCase().includes('wearing glasses');
+    const hasHat = analysisText.toLowerCase().includes('hat') || 
+                  analysisText.toLowerCase().match(/wearing a (hat|cap)/i);
+    const isFunnyFace = analysisText.toLowerCase().includes('funny') || 
+                       analysisText.toLowerCase().includes('silly');
+
+    // Extract basic attributes
+    const ageMatch = analysisText.match(/(\d+)\s*(?:year|yr)s?\s*old/i);
+    const genderMatch = analysisText.match(/(man|woman|male|female|person|boy|girl)/i);
+    const hairColorMatch = analysisText.match(/(blonde|brunette|black|brown|red|gray|grey|white) hair/i);
+    const eyeColorMatch = analysisText.match(/(blue|brown|green|hazel|gray|grey) eyes?/i);
+    const ethnicityMatch = analysisText.match(/(caucasian|asian|african|hispanic|latino|middle eastern|indian)/i);
+
     return {
-      age: replicateData.age,
-      blurry: replicateData.quality?.blurry || false,
-      ethnicity: replicateData.demographics?.ethnicity,
-      eye_color: replicateData.features?.eyes?.color,
-      facial_hair: replicateData.features?.facial_hair?.present ? 'yes' : 'no',
-      full_body_image_or_longshot: replicateData.composition?.full_body || false,
-      funny_face: replicateData.expression?.funny || false,
-      glasses: replicateData.accessories?.glasses ? 'yes' : 'no',
-      hair_color: replicateData.features?.hair?.color,
-      hair_length: replicateData.features?.hair?.length,
-      hair_style: replicateData.features?.hair?.style,
-      includes_multiple_people: replicateData.detection?.people_count > 1,
-      is_bald: replicateData.features?.hair?.bald ? 'yes' : 'no',
-      selfie: replicateData.composition?.is_selfie || false,
-      wearing_hat: replicateData.accessories?.hat || false,
-      wearing_sunglasses: replicateData.accessories?.sunglasses || false,
+      age: ageMatch ? ageMatch[1] : undefined,
+      blurry: isBlurry,
+      ethnicity: ethnicityMatch ? ethnicityMatch[1] : undefined,
+      eye_color: eyeColorMatch ? eyeColorMatch[1] : undefined,
+      facial_hair: analysisText.toLowerCase().includes('beard') || 
+                  analysisText.toLowerCase().includes('mustache') ? 'yes' : 'no',
+      full_body_image_or_longshot: isFullBody,
+      funny_face: isFunnyFace,
+      glasses: hasSunglasses ? 'sunglasses' : 
+              analysisText.toLowerCase().includes('glasses') ? 'yes' : 'no',
+      hair_color: hairColorMatch ? hairColorMatch[1] : undefined,
+      hair_length: analysisText.match(/(short|medium|long) hair/i)?.[1]?.toLowerCase(),
+      hair_style: analysisText.match(/(straight|curly|wavy|braided|dreadlocks|afro)/i)?.[1]?.toLowerCase(),
+      includes_multiple_people: hasMultiplePeople,
+      is_bald: analysisText.toLowerCase().includes('bald') ? 'yes' : 'no',
+      name: genderMatch ? genderMatch[1] : undefined,
+      selfie: isSelfie,
+      wearing_hat: hasHat,
+      wearing_sunglasses: hasSunglasses,
     };
     
   } catch (error) {
     console.error('Image inspection failed:', error);
-    throw error;
+    // Return a default response with minimal information if analysis fails
+    return {
+      blurry: false,
+      full_body_image_or_longshot: false,
+      funny_face: false,
+      includes_multiple_people: false,
+      selfie: false,
+      wearing_hat: false,
+      wearing_sunglasses: false,
+    };
   }
 }
 

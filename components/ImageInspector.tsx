@@ -1,72 +1,54 @@
-import { useEffect, useState } from 'react';
-import { ImageInspectionResult, inspectImage } from '@/lib/imageInspection';
+import { useState, useEffect } from 'react';
+import { ImageInspectionResult } from '@/lib/imageInspection';
 import { Loader2 } from 'lucide-react';
 
 export interface ImageInspectorProps {
-  file: File;
-  type: string;
-  onInspectionComplete: (result: ImageInspectionResult) => void;
+  analysisResult?: ImageInspectionResult; // Make it optional to handle loading state in parent
+  // type prop might still be needed if we want to compare detected vs expected type
+  expectedType?: string; 
 }
 
-export function ImageInspector({ file, type, onInspectionComplete }: ImageInspectorProps) {
-  const [isLoading, setIsLoading] = useState(true);
+export function ImageInspector({ analysisResult, expectedType }: ImageInspectorProps) {
   const [issues, setIssues] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(!analysisResult);
 
   useEffect(() => {
-    const controller = new AbortController();
-    
-    const inspect = async () => {
-      try {
-        setIsLoading(true);
-        const result = await inspectImage(file, type);
-        if (!controller.signal.aborted) {
-          const detectedIssues: string[] = [];
+    if (analysisResult) {
+      setIsLoading(false);
+      const detectedIssues: string[] = [];
 
-          if (result.selfie) {
-            detectedIssues.push('Selfie');
-          }
-          if (result.blurry) {
-            detectedIssues.push('Image is blurry');
-          }
-          if (result.includes_multiple_people) {
-            detectedIssues.push('Multiple people');
-          }
-          if (result.full_body_image_or_longshot) {
-            detectedIssues.push('Image is not a close-up');
-          }
-          if (result.wearing_sunglasses) {
-            detectedIssues.push('Wearing sunglasses');
-          }
-          if (result.wearing_hat) {
-            detectedIssues.push('Wearing hat');
-          }
-          if (result.funny_face) {
-            detectedIssues.push('Funny face');
-          }
-          if (result.name && result.name !== type) {
-            detectedIssues.push(`Detected ${result.name}, expected ${type}`);
-          }
-
-          setIssues(detectedIssues);
-          onInspectionComplete(result);
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setIssues(['Failed to inspect image']);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
+      if (analysisResult.selfie) {
+        detectedIssues.push('Selfie');
       }
-    };
-
-    inspect();
-
-    return () => {
-      controller.abort();
-    };
-  }, [file, type]);
+      if (analysisResult.blurry) {
+        detectedIssues.push('Image is blurry');
+      }
+      if (analysisResult.includes_multiple_people) {
+        detectedIssues.push('Multiple people');
+      }
+      if (analysisResult.full_body_image_or_longshot) {
+        detectedIssues.push('Image is not a close-up');
+      }
+      if (analysisResult.wearing_sunglasses) {
+        detectedIssues.push('Wearing sunglasses');
+      }
+      if (analysisResult.wearing_hat) {
+        detectedIssues.push('Wearing hat');
+      }
+      if (analysisResult.funny_face) {
+        detectedIssues.push('Funny face');
+      }
+      // Retain type comparison if expectedType is provided
+      if (expectedType && analysisResult.name && analysisResult.name.toLowerCase() !== expectedType.toLowerCase()) {
+         detectedIssues.push(`Detected ${analysisResult.name}, expected ${expectedType}`);
+      }
+      
+      setIssues(detectedIssues);
+    } else {
+      setIsLoading(true);
+      setIssues([]); // Clear issues if analysisResult is not yet available
+    }
+  }, [analysisResult, expectedType]);
 
   if (isLoading) {
     return (

@@ -66,6 +66,12 @@ const packSpecificInfo: Record<string, PackInfo> = {
   },
 };
 
+interface ProcessedFile {
+  file: File;
+  url: string;
+  analysis: ImageInspectionResult;
+}
+
 export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
   const [currentPack, setCurrentPack] = useState<PackInfo>({
     title: "Loading Pack...",
@@ -75,11 +81,15 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
     recommendedImages: "at least 1 image"
   });
 
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<ProcessedFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [characteristics, setCharacteristics] = useState<ImageInspectionResult[]>([]);
   const { toast } = useToast();
   const router = useRouter();
+  
+  const handleInspectionComplete = useCallback((result: ImageInspectionResult) => {
+    setCharacteristics((prev) => [...prev, result]);
+  }, []);
 
   useEffect(() => {
     const packData = packSpecificInfo[packSlug] || {
@@ -106,38 +116,105 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const newFiles = acceptedFiles.filter(
-        (file) => !files.some((f) => f.name === file.name && f.size === file.size)
-      );
+      try {
+        const newFiles = acceptedFiles.filter(
+          (file) => !files.some((f) => f.file.name === file.name && f.file.size === file.size)
+        );
 
-      if (newFiles.length + files.length > 10) {
+        if (newFiles.length + files.length > 10) {
+          toast({
+            title: "Too many images",
+            description: "You can only upload up to 10 images in total.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const totalSize = files.reduce((acc, file) => acc + file.file.size, 0);
+        const newSize = newFiles.reduce((acc, file) => acc + file.size, 0);
+
+        if (totalSize + newSize > 10 * 1024 * 1024) {
+          toast({
+            title: "File size limit exceeded",
+            description: "Total size of all images cannot exceed 10MB.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+
+        setIsLoading(true);
+        const processedFiles: (ProcessedFile | null)[] = await Promise.all(
+          newFiles.map(async (file) => {
+            try {
+              // First, upload the file
+              const formData = new FormData();
+              formData.append('file', file);
+              
+              const uploadResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (!uploadResponse.ok) {
+                const error = await uploadResponse.json().catch(() => ({}));
+                throw new Error(error.message || 'Failed to upload file');
+              }
+
+
+              const { url } = await uploadResponse.json();
+              
+              // Then analyze the image
+              const analysisResponse = await fetch('/api/replicate/analyze-image', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  imageUrl: url,
+                  analysisType: form.getValues('type'),
+                }),
+              });
+
+              if (!analysisResponse.ok) {
+                throw new Error('Failed to analyze image');
+              }
+
+              const analysis = await analysisResponse.json();
+              const processedFile: ProcessedFile = { file, url, analysis };
+              handleInspectionComplete(analysis);
+              return processedFile;
+            } catch (error) {
+              console.error(`Error processing file ${file.name}:`, error);
+              toast({
+                title: `Error processing ${file.name}`,
+                description: error instanceof Error ? error.message : 'Unknown error',
+                variant: 'destructive',
+              });
+              return null;
+            }
+          })
+        );
+
+        // Filter out any failed uploads and update state
+        const successfulFiles = processedFiles.filter((file): file is ProcessedFile => file !== null);
+        setFiles(prev => [...prev, ...successfulFiles]);
+
+      } catch (error) {
+        console.error('Error in file drop handler:', error);
         toast({
-          title: "Too many images",
-          description: "You can only upload up to 10 images in total.",
-          variant: "destructive",
+          title: 'Error processing files',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
         });
-        return;
+      } finally {
+        setIsLoading(false);
       }
-
-      const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-      const newSize = newFiles.reduce((acc, file) => acc + file.size, 0);
-
-      if (totalSize + newSize > 4.5 * 1024 * 1024) { // 4.5MB limit
-        toast({
-          title: "File size limit exceeded",
-          description: "Total size of all images cannot exceed 4.5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setFiles((prev) => [...prev, ...newFiles]);
     },
-    [files, toast]
+    [files, toast, form, handleInspectionComplete]
   );
 
-  const handleInspectionComplete = (result: ImageInspectionResult) => {
-    setCharacteristics((prev) => [...prev, result]);
-  };
+
 
   const trainModel = useCallback(async () => {
     if (files.length < (currentPack.minImages || 1)) {
@@ -153,8 +230,8 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
 
     try {
       // Upload files and get URLs
-      const uploadPromises = files.map((file) =>
-        upload(file.name, file, {
+      const uploadPromises = files.map((item) => // Changed 'file' to 'item' to avoid confusion with the 'file' property of ProcessedFile
+        upload(item.file.name, item.file, {
           access: "public",
           handleUploadUrl: "/api/upload",
         })
@@ -362,28 +439,37 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
                   <h3 className="text-lg font-semibold">Selected Images: {files.length}</h3>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {files.map((file, index) => (
-                      <div key={`${file.name}-${index}`} className="relative group aspect-square">
-                        <ImageInspector
-                          file={file}
-                          type={modelType as 'man' | 'woman' | 'person'} // Cast type if necessary
-                          onInspectionComplete={handleInspectionComplete}
+                      <div key={index} className="relative group">
+                        <Image
+                          src={file.url}
+                          alt={`Preview ${index + 1}`}
+                          width={100}
+                          height={100}
+                          className="rounded-md object-cover h-24 w-24"
                         />
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-                            setCharacteristics((prevChars) => prevChars.filter((_, i) => i !== index));
+                            setFiles(files.filter((_, i) => i !== index));
+                            setCharacteristics(characteristics.filter((_, i) => i !== index));
                           }}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                           aria-label="Remove image"
                         >
                           ✕
                         </button>
+                        <div className="mt-1 text-xs text-muted-foreground truncate w-24">
+                          {file.file.name}
+                        </div>
+                        <ImageInspector
+                          analysisResult={file.analysis} // Pass the analysis result from the ProcessedFile object
+                          expectedType={form.watch('type')} // Pass the expected type for comparison
+                        />
                       </div>
                     ))}
                   </div>
-                   {files.length < (currentPack.minImages || 1) && (
+                  {files.length < (currentPack.minImages || 1) && (
                     <p className="text-sm text-yellow-600 dark:text-yellow-400">
                       Please upload at least {currentPack.minImages || 1} images to enable training.
                     </p>
