@@ -229,24 +229,32 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
     setIsLoading(true);
 
     try {
-      // Upload files using our server endpoint only (don't use client-side upload)
+      // Upload files using our server endpoint
       const uploadPromises = files.map(async (item) => {
-        // Create a form data object for each file
-        const formData = new FormData();
-        formData.append('file', item.file);
-        
-        // Use the server endpoint directly
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to upload file');
+        try {
+          // Get the file and its name
+          const file = item.file;
+          const fileName = encodeURIComponent(file.name);
+          
+          // Use the server endpoint with filename as query parameter
+          const response = await fetch(`/api/upload?filename=${fileName}`, {
+            method: 'POST',
+            body: file, // Send the file directly as the request body
+            headers: {
+              'Content-Type': file.type || 'application/octet-stream',
+            },
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to upload file');
+          }
+          
+          return response.json();
+        } catch (error) {
+          console.error('Upload error:', error);
+          throw error; // Re-throw to be caught by the outer catch
         }
-        
-        return response.json();
       });
 
       const blobs = await Promise.all(uploadPromises);
