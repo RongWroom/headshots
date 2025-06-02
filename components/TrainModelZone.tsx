@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -11,27 +12,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Keep if used, remove if not
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FaFemale, FaImages, FaMale, FaRainbow } from "react-icons/fa";
 import * as z from "zod";
-import { fileUploadFormSchema } from "@/types/zod";
+import { fileUploadFormSchema } from "@/types/zod"; // Ensure this path is correct
 import { upload } from "@vercel/blob/client";
-import { ImageInspector } from "./ImageInspector";
-import { ImageInspectionResult, aggregateCharacteristics } from "@/lib/imageInspection";
+import { ImageInspector } from "./ImageInspector"; // Ensure this path is correct
+import { ImageInspectionResult, aggregateCharacteristics } from "@/lib/imageInspection"; // Ensure this path is correct
 
 type FormInput = z.infer<typeof fileUploadFormSchema>;
 
@@ -39,18 +33,70 @@ interface TrainModelZoneProps {
   packSlug: string;
 }
 
+interface PackInfo {
+  title: string;
+  exampleImageUrls: string[];
+  description?: string;
+  minImages?: number;
+  recommendedImages?: string;
+}
+
+const packSpecificInfo: Record<string, PackInfo> = {
+  "actor-headshots": {
+    title: "Actor Headshots Pack",
+    description: "Create professional actor headshots with a classic, compelling look. Upload 5-10 clear photos of the subject.",
+    exampleImageUrls: [
+      "/images/examples/actor-1.jpg",
+      "/images/examples/actor-2.jpg",
+      "/images/examples/actor-3.jpg",
+    ],
+    minImages: 5,
+    recommendedImages: "5-10 images",
+  },
+  "corporate-headshots": {
+    title: "Corporate Headshots Pack",
+    description: "Generate polished corporate headshots perfect for your professional profile. Upload 5-10 clear photos of the subject.",
+    exampleImageUrls: [
+      "/images/examples/corporate-1.jpg",
+      "/images/examples/corporate-2.jpg",
+      "/images/examples/corporate-3.jpg",
+    ],
+    minImages: 5,
+    recommendedImages: "5-10 images",
+  },
+};
+
 export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
+  const [currentPack, setCurrentPack] = useState<PackInfo>({
+    title: "Loading Pack...",
+    description: "",
+    exampleImageUrls: [],
+    minImages: 1,
+    recommendedImages: "at least 1 image"
+  });
+
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [characteristics, setCharacteristics] = useState<ImageInspectionResult[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
+  useEffect(() => {
+    const packData = packSpecificInfo[packSlug] || {
+      title: "Unknown Headshot Pack",
+      description: "Please select a valid pack.",
+      exampleImageUrls: [],
+      minImages: 1,
+      recommendedImages: "at least 1 image"
+    };
+    setCurrentPack(packData);
+  }, [packSlug]);
+
   const form = useForm<FormInput>({
     resolver: zodResolver(fileUploadFormSchema),
     defaultValues: {
       name: "",
-      type: "person",
+      type: "person", // Default to person, or adjust as needed
     },
   });
 
@@ -61,7 +107,7 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const newFiles = acceptedFiles.filter(
-        (file) => !files.some((f) => f.name === file.name)
+        (file) => !files.some((f) => f.name === file.name && f.size === file.size)
       );
 
       if (newFiles.length + files.length > 10) {
@@ -76,7 +122,7 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
       const newSize = newFiles.reduce((acc, file) => acc + file.size, 0);
 
-      if (totalSize + newSize > 4.5 * 1024 * 1024) {
+      if (totalSize + newSize > 4.5 * 1024 * 1024) { // 4.5MB limit
         toast({
           title: "File size limit exceeded",
           description: "Total size of all images cannot exceed 4.5MB.",
@@ -84,7 +130,6 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
         });
         return;
       }
-
       setFiles((prev) => [...prev, ...newFiles]);
     },
     [files, toast]
@@ -95,10 +140,10 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
   };
 
   const trainModel = useCallback(async () => {
-    if (files.length === 0) {
+    if (files.length < (currentPack.minImages || 1)) {
       toast({
-        title: "No files selected",
-        description: "Please upload at least one image to train your model.",
+        title: "Not enough images",
+        description: `Please upload at least ${currentPack.minImages || 1} images for the ${currentPack.title}.`,
         variant: "destructive",
       });
       return;
@@ -117,32 +162,31 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
 
       const blobs = await Promise.all(uploadPromises);
       const imageUrls = blobs.map((blob) => blob.url);
+      const modelName = form.getValues("name").trim().toLowerCase().replace(/\s+/g, "-") || `model-${Date.now()}`;
+      const modelType = form.getValues("type") as 'man' | 'woman' | 'person';
 
-      const modelName = form.getValues("name").trim().toLowerCase().replace(/\s+/g, "-");
-      const aggregatedCharacteristics = aggregateCharacteristics(characteristics);
-
-      // Start training with Replicate
-      const trainingResponse = await fetch("/api/replicate/train", {
-        method: "POST",
+      // Call our new training API
+      const trainingResponse = await fetch('/api/replicate/train', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           imageUrls,
           modelName,
+          packSlug,
           trainingConfig: {
+            trigger_word: `sks${modelName.substring(0, 4)}`,
+            lora_type: "style",
             training_steps: 1000,
-            learning_rate: 1e-6,
-            resolution: 768,
-            ...aggregatedCharacteristics,
-          },
+            subject_type: modelType === 'person' ? 'person' : modelType === 'man' ? 'male' : 'female'
+          }
         }),
       });
 
       const result = await trainingResponse.json();
 
       if (!trainingResponse.ok) {
-        // Handle credit-related errors
         if (result.message && result.message.includes("credits")) {
           const messageWithButton = (
             <div className="flex flex-col gap-4">
@@ -157,79 +201,96 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
             title: "Insufficient Credits",
             description: messageWithButton,
             variant: "destructive",
-            duration: 5000,
+            duration: 10000,
           });
-          return;
+        } else {
+          throw new Error(result.error?.message || 'Failed to start training');
         }
-        
-        throw new Error(result.error || result.message || 'Failed to start training');
+        return;
       }
 
-      // Show success message
       toast({
-        title: "Training started",
+        title: "Training started!",
         description: "Your model is being trained. You'll be notified when it's ready.",
         duration: 5000,
       });
 
-      // Reset form
-      form.reset({
-        name: "",
-        type: "person",
-      });
+      form.reset({ name: "", type: "person" });
       setFiles([]);
       setCharacteristics([]);
-      
-      // Redirect to home page
-      router.push("/");
+      router.push("/"); // Or to a "training in progress" page
+
     } catch (error) {
       console.error("Training error:", error);
       toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to start training",
+        title: "Training Error",
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
         variant: "destructive",
-        duration: 5000,
+        duration: 10000,
       });
     } finally {
       setIsLoading(false);
     }
-  }, [files, characteristics, form, router, toast]);
+  }, [files, characteristics, form, router, toast, currentPack]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] },
+    maxFiles: 10,
+    maxSize: 4.5 * 1024 * 1024, // Individual file size limit can also be set here if desired
   });
 
   const modelType = form.watch("type");
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Train New Model</h1>
-      
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Pack Information and Examples */}
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold tracking-tight mb-3">{currentPack.title}</h1>
+        {currentPack.description && (
+          <p className="text-lg text-muted-foreground mb-6">{currentPack.description}</p>
+        )}
+        {currentPack.exampleImageUrls.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4">Example Results:</h3>
+            <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
+              {currentPack.exampleImageUrls.map((url, index) => (
+                <div key={index} className="aspect-square relative rounded-lg overflow-hidden border shadow-md">
+                  <Image
+                    src={url}
+                    alt={`Example ${index + 1} for ${currentPack.title}`}
+                    layout="fill"
+                    objectFit="cover"
+                    className="bg-gray-100"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left column - Form fields */}
-            <div className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Left Column: Form Fields */}
+            <div className="space-y-6 p-6 border rounded-lg shadow-sm bg-card">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Model Name</FormLabel>
+                    <FormLabel className="text-base">Your Model Name (Optional)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter a name for your model"
+                        placeholder="e.g., MyProHeadshots"
                         {...field}
                         disabled={isLoading}
+                        className="text-base"
                       />
                     </FormControl>
                     <FormDescription>
-                      This will be used to identify your model.
+                      Give your trained model a unique name. If blank, one will be generated.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -241,40 +302,25 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
                 name="type"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>Model Type</FormLabel>
+                    <FormLabel className="text-base">Subject Type</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-col space-y-1"
+                        className="flex flex-col space-y-2"
                         disabled={isLoading}
                       >
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="man" />
-                          </FormControl>
-                          <FormLabel className="font-normal flex items-center">
-                            <FaMale className="mr-2 h-4 w-4 text-blue-500" />
-                            Male
-                          </FormLabel>
+                        <FormItem className="flex items-center space-x-3">
+                          <FormControl><RadioGroupItem value="man" /></FormControl>
+                          <Label className="font-normal flex items-center text-base"><FaMale className="mr-2 h-5 w-5 text-blue-500" />Man</Label>
                         </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="woman" />
-                          </FormControl>
-                          <FormLabel className="font-normal flex items-center">
-                            <FaFemale className="mr-2 h-4 w-4 text-pink-500" />
-                            Female
-                          </FormLabel>
+                        <FormItem className="flex items-center space-x-3">
+                          <FormControl><RadioGroupItem value="woman" /></FormControl>
+                          <Label className="font-normal flex items-center text-base"><FaFemale className="mr-2 h-5 w-5 text-pink-500" />Woman</Label>
                         </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="other" />
-                          </FormControl>
-                          <FormLabel className="font-normal flex items-center">
-                            <FaRainbow className="mr-2 h-4 w-4 text-purple-500" />
-                            Other
-                          </FormLabel>
+                        <FormItem className="flex items-center space-x-3">
+                          <FormControl><RadioGroupItem value="person" /></FormControl>
+                          <Label className="font-normal flex items-center text-base"><FaRainbow className="mr-2 h-5 w-5 text-purple-500" />Person/Other</Label>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
@@ -282,78 +328,66 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
                   </FormItem>
                 )}
               />
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={isLoading || files.length === 0}
-                  className="w-full"
-                >
-                  {isLoading ? "Training..." : "Train Model"}
-                </Button>
-              </div>
+               <Button
+                type="submit"
+                disabled={isLoading || files.length < (currentPack.minImages || 1)}
+                className="w-full text-lg py-3"
+                size="lg"
+              >
+                {isLoading ? "Processing..." : `Train Model (${files.length}/${currentPack.recommendedImages || '10'})`}
+              </Button>
             </div>
 
-            {/* Right column - Image upload */}
-            <div className="space-y-4">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                  isDragActive ? "border-primary bg-primary/10" : "border-muted-foreground/25"
-                }`}
-              >
+            {/* Right Column: Image Upload & Preview */}
+            <div className="space-y-6 p-6 border rounded-lg shadow-sm bg-card">
+              <div {...getRootProps()} className="cursor-pointer">
                 <input {...getInputProps()} />
-                <div className="flex flex-col items-center justify-center space-y-2">
-                  <FaImages className="h-12 w-12 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {isDragActive
-                      ? "Drop the files here..."
-                      : "Drag & drop images here, or click to select files"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Up to 10 images, 10MB total
-                  </p>
+                <div
+                  className={`w-full p-8 border-2 border-dashed rounded-lg text-center transition-colors
+                    ${isDragActive ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}`}
+                >
+                  <FaImages className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500 mb-3" />
+                  {isDragActive ? (
+                    <p className="font-semibold text-primary text-lg">Drop images here...</p>
+                  ) : (
+                    <p className="text-md text-muted-foreground">
+                      Drag & drop {currentPack.recommendedImages || 'up to 10 images'} here, or click to select (max 4.5MB total).
+                    </p>
+                  )}
                 </div>
               </div>
 
               {files.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Selected Images ({files.length})</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold">Selected Images: {files.length}</h3>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {files.map((file, index) => (
-                      <div key={index} className="relative group">
+                      <div key={`${file.name}-${index}`} className="relative group aspect-square">
                         <ImageInspector
                           file={file}
-                          type={modelType}
+                          type={modelType as 'man' | 'woman' | 'person'} // Cast type if necessary
                           onInspectionComplete={handleInspectionComplete}
                         />
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setFiles(files.filter((_, i) => i !== index));
-                            setCharacteristics(characteristics.filter((_, i) => i !== index));
+                            setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+                            setCharacteristics((prevChars) => prevChars.filter((_, i) => i !== index));
                           }}
-                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                          </svg>
+                          ✕
                         </button>
                       </div>
                     ))}
                   </div>
+                   {files.length < (currentPack.minImages || 1) && (
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                      Please upload at least {currentPack.minImages || 1} images to enable training.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

@@ -1,10 +1,10 @@
 'use client'
-import { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import axios from "axios";
+import { useState } from "react";
 import Link from "next/link";
-import { Progress } from "./ui/progress";
-import { Loader2 } from "lucide-react";
+// import { useToast } from "@/components/ui/use-toast"; // Not used anymore
+// import axios from "axios"; // Not used anymore
+// import { Progress } from "./ui/progress"; // Not used anymore
+// import { Loader2 } from "lucide-react"; // Not used anymore
 
 interface Model {
   id: string;
@@ -13,56 +13,37 @@ interface Model {
   slug: string;
 }
 
+const staticModels: Model[] = [
+  {
+    id: "actor-headshots",
+    title: "Actor Headshots",
+    cover_url: "/images/placeholder-actor.jpg", // Placeholder - ensure this image exists or use a service
+    slug: "actor-headshots",
+  },
+  {
+    id: "corporate-headshots",
+    title: "Corporate Headshots",
+    cover_url: "/images/placeholder-corporate.jpg", // Placeholder - ensure this image exists or use a service
+    slug: "corporate-headshots",
+  },
+];
+
 export default function PacksGalleryZone() {
-  const [models, setModels] = useState<Model[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [models, setModels] = useState<Model[]>(staticModels);
+  // const { toast } = useToast(); // Not used anymore
 
-  const fetchModels = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const response = await axios.get<Model[]>('/api/replicate/models');
-      setModels(response.data);
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast({
-        title: "Error fetching models",
-        description: error.message,
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // No fetching logic needed for static models
 
-  useEffect(() => {
-    fetchModels();
-  }, []);
+  // No loading state needed for static models
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading models...</p>
-      </div>
-    );
-  }
-
-  if (models.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-muted-foreground">No models available</p>
-      </div>
-    );
-  }
+  // No "No models available" message needed as we always have two
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {models.map((model) => (
         <Link
           key={model.id}
-          href={`/models/${model.slug}`}
+          href={`/overview/models/train/${model.slug}`}
           className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 transition-all hover:shadow-lg"
         >
           <div className="aspect-square overflow-hidden">
