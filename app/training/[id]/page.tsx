@@ -6,6 +6,6 @@ interface PageProps {
   };
 }
 
-export default function TrainingStatusPage({ params }: PageProps) {
+export default async function TrainingStatusPage({ params }: PageProps) {
   return <TrainingStatusClient trainingId={params.id} />;
 }

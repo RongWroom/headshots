@@ -1,23 +1,47 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trainRequestSchema } from '@/types/training';
 
 export async function POST(req: Request) {
+  // Create a response object for auth cookies
+  const authResponse = new NextResponse();
+  
+  // Create Supabase client with cookie handling
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.headers.get('cookie')?.split('; ').find(row => row.startsWith(`${name}=`))?.split('=')[1];
+        },
+        set(name: string, value: string, options: any) {
+          authResponse.cookies.set(name, value, options);
+        },
+        remove(name: string, options: any) {
+          authResponse.cookies.set(name, '', options);
+        },
+      },
+    }
+  );
+  
   try {
-    // Verify authentication with Supabase
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session?.user) {
+    // Get the current user
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error || !user) {
       return NextResponse.json(
         { error: "Unauthorized - Please sign in" },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: authResponse.headers
+        }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Parse and validate request body
     const requestData = await req.json();
@@ -72,27 +96,44 @@ export async function POST(req: Request) {
       console.error('Replicate API error:', error);
       return NextResponse.json(
         { error: "Failed to start training", details: error },
-        { status: response.status }
+        { 
+          status: response.status,
+          headers: authResponse.headers
+        }
       );
     }
 
     const result = await response.json();
 
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       success: true,
       trainingId: result.id,
       status: 'training_started',
       message: 'Training job started successfully'
     });
 
+    // Copy auth cookies to the success response
+    for (const [key, value] of authResponse.headers.entries()) {
+      successResponse.headers.set(key, value);
+    }
+
+    return successResponse;
+
   } catch (error) {
     console.error('Training error:', error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { 
         error: 'Failed to start training',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
+
+    // Copy auth cookies to the error response
+    for (const [key, value] of authResponse.headers.entries()) {
+      errorResponse.headers.set(key, value);
+    }
+
+    return errorResponse;
   }
 }
