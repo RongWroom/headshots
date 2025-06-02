@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 
-// Ensure the environment has the BLOB_READ_WRITE_TOKEN for Vercel Blob
-if (!process.env.BLOB_READ_WRITE_TOKEN) {
-  console.warn('Warning: BLOB_READ_WRITE_TOKEN environment variable is not set. File uploads may fail.');
-}
+// Debug the environment variable - will be logged on server startup
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+const tokenLength = blobToken ? blobToken.length : 0;
+const tokenStart = blobToken ? blobToken.substring(0, 10) : 'not-set';
+const tokenEnd = blobToken && blobToken.length > 10 ? blobToken.substring(blobToken.length - 10) : '';
+
+console.log(`Blob token status: ${blobToken ? 'Set' : 'Not Set'}, Length: ${tokenLength}, Format: ${tokenStart}...${tokenEnd}`);
 
 export const runtime = 'edge';
 
