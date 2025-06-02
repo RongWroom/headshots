@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     const uniqueFileName = `${Date.now()}-${file.name}`;
     const blob = await put(uniqueFileName, file, {
       access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN // Explicitly pass the token
     });
 
     if (!blob || !blob.url) {
