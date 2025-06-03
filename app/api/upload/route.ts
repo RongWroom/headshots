@@ -5,19 +5,18 @@ export const runtime = 'edge';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    // Get the filename from the URL query parameters
-    const { searchParams } = new URL(request.url);
-    const filename = searchParams.get('filename');
+    // Get the filename from the X-Filename header
+    const filename = request.headers.get('X-Filename') || request.headers.get('x-filename');
 
     console.log('Upload request received for filename:', filename);
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     console.log('BLOB_READ_WRITE_TOKEN exists:', !!process.env.BLOB_READ_WRITE_TOKEN);
     
     if (!filename) {
-      const error = 'Filename is required as a query parameter';
+      const error = 'Filename is required in X-Filename header';
       console.error('Upload error:', error);
       return NextResponse.json(
-        { error, message: 'Missing required filename parameter' },
+        { error, message: 'Missing required X-Filename header' },
         { status: 400 }
       );
     }

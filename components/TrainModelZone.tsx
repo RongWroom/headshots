@@ -147,20 +147,24 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
         const processedFiles: (ProcessedFile | null)[] = await Promise.all(
           newFiles.map(async (file) => {
             try {
-              // First, upload the file
-              const formData = new FormData();
-              formData.append('file', file);
+              // First, upload the file with filename in header
+              const safeFilename = file.name.replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
+              
+              console.log('Starting file upload:', file.name, 'Safe filename:', safeFilename);
               
               const uploadResponse = await fetch('/api/upload', {
                 method: 'POST',
-                body: formData,
+                body: file, // Send file directly
+                headers: {
+                  'X-Filename': safeFilename,
+                  'Content-Type': file.type || 'application/octet-stream',
+                },
               });
 
               if (!uploadResponse.ok) {
                 const error = await uploadResponse.json().catch(() => ({}));
                 throw new Error(error.message || 'Failed to upload file');
               }
-
 
               const { url } = await uploadResponse.json();
               
@@ -229,69 +233,14 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
     setIsLoading(true);
 
     try {
-      // Upload files using our server endpoint
-      const uploadPromises = files.map(async (item) => {
-        try {
-          // Get the file and its name
-          const file = item.file;
-          // Replace spaces with underscores and encode the filename
-          const safeFilename = file.name.replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
-          const fileName = encodeURIComponent(safeFilename);
-          
-          console.log('Starting file upload:', file.name, 'Safe filename:', safeFilename, 'Size:', file.size, 'Type:', file.type);
-          
-          // Use the server endpoint with filename as query parameter
-          console.log('Upload URL:', `/api/upload?filename=${fileName}`);
-          const response = await fetch(`/api/upload?filename=${fileName}`, {
-            method: 'POST',
-            body: file, // Send the file directly as the request body
-            headers: {
-              'Content-Type': file.type || 'application/octet-stream',
-            },
-          });
-          
-          const responseText = await response.text();
-          let errorData;
-          
-          try {
-            errorData = responseText ? JSON.parse(responseText) : {};
-          } catch (e) {
-            console.error('Failed to parse error response:', e);
-            errorData = { rawResponse: responseText };
-          }
-          
-          if (!response.ok) {
-            console.error('Upload failed:', {
-              status: response.status,
-              statusText: response.statusText,
-              errorData,
-              headers: Object.fromEntries(response.headers.entries())
-            });
-            
-            const errorMessage = errorData.message || 
-                             errorData.error || 
-                             `HTTP ${response.status}: ${response.statusText}`;
-            
-            throw new Error(`Upload failed: ${errorMessage}`);
-          }
-          
-          // If we get here, the upload was successful
-          console.log('Upload successful for file:', file.name);
-          return errorData; // This is actually the success response
-          
-          return response.json();
-        } catch (error) {
-          console.error('Upload error:', error);
-          throw error; // Re-throw to be caught by the outer catch
-        }
-      });
-
-      const blobs = await Promise.all(uploadPromises);
-      const imageUrls = blobs.map((blob) => blob.url);
+      // Use the URLs from already uploaded files
+      const imageUrls = files.map((file) => file.url);
       const modelName = form.getValues("name").trim().toLowerCase().replace(/\s+/g, "-") || `model-${Date.now()}`;
       const modelType = form.getValues("type") as 'man' | 'woman' | 'person';
 
-      // Call our new training API
+      console.log('Starting model training with URLs:', imageUrls);
+
+      // Call our training API
       const trainingResponse = await fetch('/api/replicate/train', {
         method: 'POST',
         headers: {
