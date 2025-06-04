@@ -79,13 +79,14 @@ export async function POST(req: Request) {
     };
 
     // Call Replicate API to start training
-    const response = await fetch("https://api.replicate.com/v1/models/replicate/flux-fast-trainer/versions/8b10794665aed907bb98a1a5324cd1d3a8bea0e9b31e65210967fb9c9e2e08ed/trainings", {
+    const response = await fetch("https://api.replicate.com/v1/trainings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`
       },
       body: JSON.stringify({
+        version: "replicate/flux-fast-trainer:latest",
         destination: `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`,
         input: trainingInput
       })
