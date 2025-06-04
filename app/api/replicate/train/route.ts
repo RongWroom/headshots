@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trainRequestSchema } from '@/types/training';
+import JSZip from 'jszip';
+import { put } from '@vercel/blob';
+import axios from 'axios';
 
 export const dynamic = "force-dynamic";
 
@@ -80,17 +83,128 @@ export async function POST(req: Request) {
       trigger_word: trainingConfig?.trigger_word || `sks${modelName.substring(0, 4)}`,
     };
 
+    // Log modelName and destination
+    console.log(`Attempting to train with modelName: "${modelName}"`);
+    const destination = `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`;
+    console.log(`Replicate destination: "${destination}"`);
+
+    // Step 1: Attempt to create the Replicate model destination
+    console.log(`Attempting to create Replicate model destination: ${destination}`);
+    try {
+      const createModelResponse = await fetch("https://api.replicate.com/v1/models", {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner: process.env.REPLICATE_USERNAME,
+          name: modelName,
+          visibility: "private",
+          hardware: "gpu-t4", // General purpose GPU for model placeholder
+        }),
+      });
+
+      if (createModelResponse.ok) { // Typically 200 OK or 201 Created
+        const newModel = await createModelResponse.json();
+        console.log('Successfully created/ensured Replicate model destination:', newModel.url);
+      } else {
+        const errorData = await createModelResponse.json();
+        // Check common Replicate error patterns for "already exists"
+        let modelExists = false;
+        const errorMessage = errorData.detail || (errorData.errors && errorData.errors[0]?.detail) || errorData.message || '';
+        if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes("already exists")) {
+            modelExists = true;
+        }
+
+        if (modelExists) {
+          console.log(`Replicate model destination ${destination} already exists. Proceeding with training.`);
+        } else {
+          console.error('Failed to create Replicate model destination:', JSON.stringify(errorData, null, 2));
+          return NextResponse.json(
+            { error: "Failed to create Replicate model destination", details: errorData },
+            { status: createModelResponse.status, headers: authResponse.headers }
+          );
+        }
+      }
+    } catch (modelCreationError) {
+      console.error('Error during Replicate model destination creation:', modelCreationError);
+      const errorResponse = NextResponse.json(
+        { 
+          error: 'Error during Replicate model destination creation', 
+          details: modelCreationError instanceof Error ? modelCreationError.message : 'Unknown error' 
+        },
+        { status: 500 }
+      );
+      for (const [key, value] of authResponse.headers.entries()) {
+        errorResponse.headers.set(key, value);
+      }
+      return errorResponse;
+    }
+
+    // Step 2: Fetch images, create ZIP, and upload to Vercel Blob
+    let zipBlobUrl = '';
+    try {
+      console.log('Fetching images and creating ZIP...');
+      const zip = new JSZip();
+      for (let i = 0; i < imageUrls.length; i++) {
+        const imageUrl = imageUrls[i];
+        try {
+          const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+          const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+          zip.file(filename, response.data);
+          console.log(`Added ${filename} to ZIP.`);
+        } catch (fetchError) {
+          console.error(`Failed to fetch image ${imageUrl}:`, fetchError);
+          // Optionally, decide if one failed image should stop the whole process
+          // For now, we'll log and continue, Replicate might handle missing images gracefully or error out
+        }
+      }
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      console.log('ZIP file created. Uploading to Vercel Blob...');
+
+      const blobFilename = `training-images-${userId}-${Date.now()}.zip`;
+      const blob = await put(blobFilename, zipBuffer, {
+        access: 'public',
+        contentType: 'application/zip',
+      });
+      zipBlobUrl = blob.url;
+      console.log(`ZIP file uploaded to Vercel Blob: ${zipBlobUrl}`);
+
+    } catch (zipError) {
+      console.error('Error creating or uploading ZIP file:', zipError);
+      const errorResponse = NextResponse.json(
+        { 
+          error: 'Error creating or uploading ZIP file for training images', 
+          details: zipError instanceof Error ? zipError.message : 'Unknown error' 
+        },
+        { status: 500 }
+      );
+      for (const [key, value] of authResponse.headers.entries()) {
+        errorResponse.headers.set(key, value);
+      }
+      return errorResponse;
+    }
+
+    // Step 3: Prepare the input payload for Replicate training
+    const replicatePayloadInput = {
+      input_images: zipBlobUrl, // URL to the ZIP file on Vercel Blob
+      trigger_word: trainingConfig?.trigger_word || `sks${modelName.substring(0, 4)}`,
+      lora_type: styleConfig.lora_type, // 'style' or 'subject'
+    };
+    console.log('Replicate payload input:', JSON.stringify(replicatePayloadInput, null, 2));
+
     // Call Replicate API to start training
-    const response = await fetch("https://api.replicate.com/v1/trainings", {
+    const response = await fetch("https://api.replicate.com/v1/models/replicate/fast-flux-trainer/versions/8b10794665aed907bb98a1a5324cd1d3a8bea0e9b31e65210967fb9c9e2e08ed/trainings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`
       },
       body: JSON.stringify({
-        version: "replicate/fast-flux-trainer:8b107946",
-        destination: `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`,
-        input: trainingInput
+        destination: destination,
+        input: replicatePayloadInput
       })
     });
 

@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 export const trainRequestSchema = z.object({
   imageUrls: z.array(z.string().url()).min(1, "At least one image is required"),
-  modelName: z.string().min(1, "Model name is required"),
+  modelName: z.string()
+    .min(1, "Model name is required")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Model name must be lowercase alphanumeric with hyphens only (e.g., my-model-name)"),
   packSlug: z.enum(["actor-headshots", "corporate-headshots"]).optional(),
   trainingConfig: z.object({
     trigger_word: z.string().default("sks"),
