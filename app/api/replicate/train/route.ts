@@ -88,7 +88,7 @@ export async function POST(req: Request) {
         "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`
       },
       body: JSON.stringify({
-        version: "replicate/flux-fast-trainer:latest",
+        version: "replicate/fast-flux-trainer:8b107946",
         destination: `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`,
         input: trainingInput
       })
