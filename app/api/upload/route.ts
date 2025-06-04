@@ -5,10 +5,12 @@ export const runtime = 'edge';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    // Get the filename from the X-Filename header
+    // Get the filename and model name from headers
     const filename = request.headers.get('X-Filename') || request.headers.get('x-filename');
+    const modelName = request.headers.get('X-Model-Name') || request.headers.get('x-model-name') || 'default';
 
     console.log('Upload request received for filename:', filename);
+    console.log('Using model name for organization:', modelName);
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     console.log('BLOB_READ_WRITE_TOKEN exists:', !!process.env.BLOB_READ_WRITE_TOKEN);
     
@@ -31,8 +33,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Add timestamp to prevent name collisions
-    const uniqueFilename = `${Date.now()}-${filename}`;
+    // Add model name as folder prefix and timestamp to prevent name collisions
+    const uniqueFilename = `${modelName}/${Date.now()}-${filename}`;
     
     try {
       console.log('Attempting to upload to Vercel Blob:', uniqueFilename);

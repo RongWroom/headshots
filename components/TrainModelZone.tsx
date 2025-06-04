@@ -152,11 +152,15 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
               
               console.log('Starting file upload:', file.name, 'Safe filename:', safeFilename);
               
+              // Get model name for folder organization
+              const modelName = form.getValues("name").trim().toLowerCase().replace(/\s+/g, "-") || `model-${Date.now()}`;
+              
               const uploadResponse = await fetch('/api/upload', {
                 method: 'POST',
                 body: file, // Send file directly
                 headers: {
                   'X-Filename': safeFilename,
+                  'X-Model-Name': modelName, // Add model name as header
                   'Content-Type': file.type || 'application/octet-stream',
                 },
               });

@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trainRequestSchema } from '@/types/training';
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   // Create a response object for auth cookies
   const authResponse = new NextResponse();
