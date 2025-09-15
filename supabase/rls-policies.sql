@@ -1,47 +1,76 @@
--- Enable Row Level Security
-ALTER TABLE user_models ENABLE ROW LEVEL SECURITY;
-ALTER TABLE generations ENABLE ROW LEVEL SECURITY;
+-- =====================================================
+-- ADDITIONAL ROW LEVEL SECURITY POLICIES
+-- =====================================================
+-- Note: Basic RLS policies are already included in the main migration file.
+-- This file contains additional or supplementary policies if needed.
 
--- User Models policies
--- Only allow users to view their own user models
-CREATE POLICY "Users can view their own user models" 
-  ON user_models FOR SELECT 
-  USING (auth.uid()::text = user_id);
+-- Additional service role policies for comprehensive access
+-- These complement the policies in the migration file
 
--- Only allow users to update their own user models
-CREATE POLICY "Users can update their own user models" 
-  ON user_models FOR UPDATE 
-  USING (auth.uid()::text = user_id);
+-- =====================================================
+-- ADDITIONAL MODELS TABLE POLICIES
+-- =====================================================
 
--- Only allow users to insert their own user models
-CREATE POLICY "Users can insert their own user models" 
-  ON user_models FOR INSERT 
-  WITH CHECK (auth.uid()::text = user_id);
+-- Allow service role to insert models (for webhook operations)
+CREATE POLICY "Service role can insert models" 
+  ON public.models FOR INSERT 
+  TO service_role
+  WITH CHECK (true);
 
--- Generations policies
--- Only allow users to view their own generations
-CREATE POLICY "Users can view their own generations" 
-  ON generations FOR SELECT 
-  USING (auth.uid()::text = user_id);
+-- Allow service role to read all models
+CREATE POLICY "Service role can read all models" 
+  ON public.models FOR SELECT 
+  TO service_role
+  USING (true);
 
--- Only allow users to update their own generations
-CREATE POLICY "Users can update their own generations" 
-  ON generations FOR UPDATE 
-  USING (auth.uid()::text = user_id);
+-- =====================================================
+-- ADDITIONAL SAMPLES TABLE POLICIES
+-- =====================================================
 
--- Only allow users to insert their own generations
-CREATE POLICY "Users can insert their own generations" 
-  ON generations FOR INSERT 
-  WITH CHECK (auth.uid()::text = user_id);
+-- Allow service role to insert samples (for webhook operations)
+CREATE POLICY "Service role can insert samples" 
+  ON public.samples FOR INSERT 
+  TO service_role
+  WITH CHECK (true);
 
--- Create a separate policy for the webhook service
--- This allows the service role to update records regardless of user_id
--- Note: This isn't needed when using the service role key directly,
--- as it bypasses RLS completely, but it's good to have for documentation
-CREATE POLICY "Service can update any user model" 
-  ON user_models FOR UPDATE 
-  USING (auth.jwt() ->> 'role' = 'service_role');
+-- Allow service role to read all samples
+CREATE POLICY "Service role can read all samples" 
+  ON public.samples FOR SELECT 
+  TO service_role
+  USING (true);
 
-CREATE POLICY "Service can update any generation" 
-  ON generations FOR UPDATE 
-  USING (auth.jwt() ->> 'role' = 'service_role');
+-- Allow service role to update samples
+CREATE POLICY "Service role can update samples" 
+  ON public.samples FOR UPDATE 
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Allow service role to delete samples
+CREATE POLICY "Service role can delete samples" 
+  ON public.samples FOR DELETE 
+  TO service_role
+  USING (true);
+
+-- =====================================================
+-- ADDITIONAL IMAGES TABLE POLICIES
+-- =====================================================
+
+-- Allow service role to update images
+CREATE POLICY "Service role can update images" 
+  ON public.images FOR UPDATE 
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Allow service role to delete images
+CREATE POLICY "Service role can delete images" 
+  ON public.images FOR DELETE 
+  TO service_role
+  USING (true);
+
+-- Allow service role to read all images
+CREATE POLICY "Service role can read all images" 
+  ON public.images FOR SELECT 
+  TO service_role
+  USING (true);

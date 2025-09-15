@@ -8,6 +8,16 @@
 # testing
 /coverage
 
+# SQL files - prevent sensitive database files from being committed
+# Allow schema, migrations, and policies but exclude data dumps and backups
+*dump*.sql
+*backup*.sql
+*export*.sql
+data/*.sql
+backups/*.sql
+# Uncomment the line below if you want to exclude ALL SQL files:
+# *.sql
+
 # next.js
 /.next/
 /out/
@@ -34,3 +44,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+supabase/rls-policies.sql
+supabase/rls-policies.sql
