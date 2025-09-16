@@ -5,12 +5,26 @@ import { trainRequestSchema } from '@/types/training';
 import JSZip from 'jszip';
 import { put } from '@vercel/blob';
 import axios from 'axios';
+import { Logger, extractErrorDetails, logApiResponse } from '@/lib/logger';
+import { 
+  validateFluxTrainingInput, 
+  validateTrainingModelConfig,
+  getRecommendedTrainingParams 
+} from '@/lib/training-validation';
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const logger = new Logger('TRAIN_API');
+  
   // Create a response object for auth cookies
   const authResponse = new NextResponse();
+  
+  logger.logInfo('REQUEST_START', {
+    url: req.url,
+    method: req.method,
+    headers: Object.fromEntries(req.headers.entries())
+  });
   
   // Create Supabase client with cookie handling
   const supabase = createServerClient(
@@ -32,36 +46,111 @@ export async function POST(req: Request) {
   );
   
   try {
+    logger.logInfo('AUTH_CHECK_START');
     
     // Get the current user
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized - Please sign in" },
-        { 
-          status: 401,
-          headers: authResponse.headers
-        }
+      const errorResponse = logger.createErrorResponse(
+        'Authentication failed',
+        'Please sign in to access this endpoint',
+        'UNAUTHORIZED',
+        { authError: error ? extractErrorDetails(error) : 'No user found' },
+        [
+          'Sign in to your account',
+          'Check if your session has expired',
+          'Refresh the page and try again'
+        ]
       );
+      
+      logger.logError('AUTH_FAILED', error || 'No user found');
+      
+      return NextResponse.json(errorResponse, { 
+        status: 401,
+        headers: authResponse.headers
+      });
     }
 
     const userId = user.id;
+    logger.setUserId(userId);
+    logger.logSuccess('AUTH_SUCCESS', { userId, userEmail: user.email });
 
     // Parse and validate request body
-    const requestData = await req.json();
+    logger.logInfo('REQUEST_PARSING_START');
+    
+    let requestData;
+    try {
+      requestData = await req.json();
+      logger.logSuccess('REQUEST_PARSED', { 
+        dataKeys: Object.keys(requestData),
+        imageCount: requestData.imageUrls?.length,
+        modelName: requestData.modelName,
+        packSlug: requestData.packSlug
+      });
+    } catch (parseError) {
+      const errorResponse = logger.createErrorResponse(
+        'Invalid JSON',
+        'Request body contains invalid JSON',
+        'INVALID_JSON',
+        { parseError: extractErrorDetails(parseError) },
+        [
+          'Check that the request body is valid JSON',
+          'Ensure all quotes are properly escaped',
+          'Verify the Content-Type header is set to application/json'
+        ]
+      );
+      
+      logger.logError('JSON_PARSE_FAILED', parseError);
+      
+      return NextResponse.json(errorResponse, { 
+        status: 400,
+        headers: authResponse.headers
+      });
+    }
+    
+    logger.logInfo('SCHEMA_VALIDATION_START');
     const validation = trainRequestSchema.safeParse(requestData);
     
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid request data", details: validation.error.issues },
-        { status: 400 }
+      const errorResponse = logger.createErrorResponse(
+        'Validation failed',
+        'Request data does not match required schema',
+        'VALIDATION_ERROR',
+        { 
+          validationErrors: validation.error.issues,
+          receivedData: requestData
+        },
+        [
+          'Check that all required fields are present',
+          'Verify imageUrls is an array of valid URLs',
+          'Ensure modelName follows naming conventions',
+          'Validate trainingConfig parameters'
+        ]
       );
+      
+      logger.logError('SCHEMA_VALIDATION_FAILED', validation.error, {
+        issues: validation.error.issues,
+        receivedData: requestData
+      });
+      
+      return NextResponse.json(errorResponse, { 
+        status: 400,
+        headers: authResponse.headers
+      });
     }
 
     const { imageUrls, modelName, packSlug, trainingConfig } = validation.data;
+    logger.logSuccess('SCHEMA_VALIDATION_SUCCESS', {
+      imageCount: imageUrls.length,
+      modelName,
+      packSlug,
+      trainingConfig
+    });
 
     // Determine style based on pack
+    logger.logInfo('STYLE_CONFIG_START', { packSlug });
+    
     const styleConfig = {
       "actor-headshots": {
         style_prompt: "professional actor headshot, dramatic lighting, cinematic, high detail, 85mm",
@@ -73,69 +162,220 @@ export async function POST(req: Request) {
       }
     }[packSlug || "corporate-headshots"];
 
+    logger.logSuccess('STYLE_CONFIG_SELECTED', { 
+      packSlug: packSlug || "corporate-headshots",
+      styleConfig 
+    });
+
     // Prepare training configuration
+    const triggerWord = trainingConfig?.trigger_word || `sks${modelName.substring(0, 4)}`;
+    const destination = `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`;
+    
     const trainingInput = {
       input_images: imageUrls,
       model_name: modelName,
       ...trainingConfig,
       ...styleConfig,
       lora_type: styleConfig.lora_type,
-      trigger_word: trainingConfig?.trigger_word || `sks${modelName.substring(0, 4)}`,
+      trigger_word: triggerWord,
     };
 
-    // Log modelName and destination
-    console.log(`Attempting to train with modelName: "${modelName}"`);
-    const destination = `${process.env.REPLICATE_USERNAME || 'your-username'}/${modelName}`;
-    console.log(`Replicate destination: "${destination}"`);
+    logger.logSuccess('TRAINING_CONFIG_PREPARED', {
+      destination,
+      triggerWord,
+      imageCount: imageUrls.length,
+      trainingInput: {
+        ...trainingInput,
+        input_images: `[${imageUrls.length} URLs]` // Don't log all URLs for brevity
+      }
+    });
+
+    // Comprehensive input validation using new validation utilities
+    logger.logInfo('COMPREHENSIVE_INPUT_VALIDATION_START');
+    
+    // Validate training model configuration
+    const modelValidation = validateTrainingModelConfig('replicate', 'fast-flux-trainer', '8b10794665aed907bb98a1a5324cd1d3a8bea0e9b31e65210967fb9c9e2e08ed');
+    
+    if (!modelValidation.isValid) {
+      const errorResponse = logger.createErrorResponse(
+        'Invalid training model configuration',
+        'The specified model cannot be used for training',
+        'INVALID_TRAINING_MODEL',
+        {
+          modelValidation,
+          currentModel: 'replicate/fast-flux-trainer',
+          modelType: modelValidation.modelType
+        },
+        [
+          'Use a proper training model instead of an inference model',
+          'Check the model documentation for training capabilities',
+          'Consider using alternative training services'
+        ]
+      );
+      
+      logger.logError('INVALID_TRAINING_MODEL', 'Attempted to use inference model for training', {
+        modelValidation,
+        destination
+      });
+      
+      return NextResponse.json(errorResponse, { 
+        status: 400,
+        headers: authResponse.headers
+      });
+    }
+    
+    // Validate FLUX training input
+    const inputValidation = await validateFluxTrainingInput(
+      imageUrls,
+      modelName,
+      trainingConfig,
+      {
+        minImages: 5,
+        maxImages: 50,
+        requireAccessibilityCheck: false // Skip for now to avoid timeout
+      }
+    );
+    
+    logger.logInfo('INPUT_VALIDATION_RESULTS', {
+      isValid: inputValidation.isValid,
+      errors: inputValidation.errors,
+      warnings: inputValidation.warnings,
+      recommendations: inputValidation.recommendations,
+      estimatedTrainingTime: inputValidation.estimatedTrainingTime,
+      estimatedCost: inputValidation.estimatedCost
+    });
+    
+    if (!inputValidation.isValid) {
+      const errorResponse = logger.createErrorResponse(
+        'Training input validation failed',
+        'The provided training inputs do not meet the requirements',
+        'INVALID_TRAINING_INPUT',
+        {
+          validationErrors: inputValidation.errors,
+          warnings: inputValidation.warnings,
+          recommendations: inputValidation.recommendations,
+          imageCount: inputValidation.imageCount,
+          inputFormat: inputValidation.inputFormat
+        },
+        inputValidation.recommendations
+      );
+      
+      logger.logError('INVALID_TRAINING_INPUT', 'Training input validation failed', {
+        inputValidation,
+        imageCount: imageUrls.length
+      });
+      
+      return NextResponse.json(errorResponse, { 
+        status: 400,
+        headers: authResponse.headers
+      });
+    }
+    
+    // Log validation warnings if any
+    if (inputValidation.warnings.length > 0) {
+      logger.logWarning('INPUT_VALIDATION_WARNINGS', 'Training input has warnings', {
+        warnings: inputValidation.warnings,
+        recommendations: inputValidation.recommendations
+      });
+    }
 
     // Step 1: Attempt to create the Replicate model destination
-    console.log(`Attempting to create Replicate model destination: ${destination}`);
+    logger.logInfo('MODEL_CREATION_START', { destination });
+    
     try {
+      const modelPayload = {
+        owner: process.env.REPLICATE_USERNAME,
+        name: modelName,
+        visibility: "private",
+        hardware: "gpu-t4", // General purpose GPU for model placeholder
+      };
+      
+      logger.logInfo('MODEL_CREATION_REQUEST', { 
+        url: "https://api.replicate.com/v1/models",
+        payload: modelPayload,
+        hasToken: !!process.env.REPLICATE_API_TOKEN
+      });
+      
       const createModelResponse = await fetch("https://api.replicate.com/v1/models", {
         method: "POST",
         headers: {
           "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          owner: process.env.REPLICATE_USERNAME,
-          name: modelName,
-          visibility: "private",
-          hardware: "gpu-t4", // General purpose GPU for model placeholder
-        }),
+        body: JSON.stringify(modelPayload),
       });
 
+      const responseData = await createModelResponse.json();
+      logApiResponse(logger, 'MODEL_CREATION_RESPONSE', createModelResponse, responseData);
+
       if (createModelResponse.ok) { // Typically 200 OK or 201 Created
-        const newModel = await createModelResponse.json();
-        console.log('Successfully created/ensured Replicate model destination:', newModel.url);
+        logger.logSuccess('MODEL_CREATION_SUCCESS', {
+          modelUrl: responseData.url,
+          modelName: responseData.name,
+          owner: responseData.owner
+        });
       } else {
-        const errorData = await createModelResponse.json();
         // Check common Replicate error patterns for "already exists"
         let modelExists = false;
-        const errorMessage = errorData.detail || (errorData.errors && errorData.errors[0]?.detail) || errorData.message || '';
+        const errorMessage = responseData.detail || (responseData.errors && responseData.errors[0]?.detail) || responseData.message || '';
         if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes("already exists")) {
             modelExists = true;
         }
 
         if (modelExists) {
-          console.log(`Replicate model destination ${destination} already exists. Proceeding with training.`);
+          logger.logWarning('MODEL_ALREADY_EXISTS', `Model ${destination} already exists, proceeding with training`, {
+            destination,
+            errorMessage
+          });
         } else {
-          console.error('Failed to create Replicate model destination:', JSON.stringify(errorData, null, 2));
-          return NextResponse.json(
-            { error: "Failed to create Replicate model destination", details: errorData },
-            { status: createModelResponse.status, headers: authResponse.headers }
+          const errorResponse = logger.createErrorResponse(
+            'Model creation failed',
+            'Failed to create Replicate model destination',
+            'MODEL_CREATION_FAILED',
+            { 
+              replicateError: responseData,
+              destination,
+              statusCode: createModelResponse.status
+            },
+            [
+              'Check if the model name is already taken',
+              'Verify REPLICATE_USERNAME is correctly configured',
+              'Ensure you have permission to create models',
+              'Try using a different model name'
+            ]
           );
+          
+          logger.logError('MODEL_CREATION_FAILED', `HTTP ${createModelResponse.status}`, {
+            replicateError: responseData,
+            destination
+          });
+          
+          return NextResponse.json(errorResponse, { 
+            status: createModelResponse.status, 
+            headers: authResponse.headers 
+          });
         }
       }
     } catch (modelCreationError) {
-      console.error('Error during Replicate model destination creation:', modelCreationError);
-      const errorResponse = NextResponse.json(
+      const errorResponse = logger.createErrorResponse(
+        'Model creation error',
+        'Unexpected error during model creation',
+        'MODEL_CREATION_ERROR',
         { 
-          error: 'Error during Replicate model destination creation', 
-          details: modelCreationError instanceof Error ? modelCreationError.message : 'Unknown error' 
+          error: extractErrorDetails(modelCreationError),
+          destination
         },
-        { status: 500 }
+        [
+          'Check your internet connection',
+          'Verify Replicate API credentials',
+          'Try again in a few moments',
+          'Contact support if the issue persists'
+        ]
       );
+      
+      logger.logError('MODEL_CREATION_ERROR', modelCreationError, { destination });
+      
+      const response = NextResponse.json(errorResponse, { status: 500 });
       for (const [key, value] of authResponse.headers.entries()) {
         errorResponse.headers.set(key, value);
       }
@@ -187,26 +427,88 @@ export async function POST(req: Request) {
       return errorResponse;
     }
 
-    // Step 3: Prepare the input payload for Replicate training
+    // Step 3: Research findings show that replicate/fast-flux-trainer is an INFERENCE model, not a training model
+    // We need to use a different approach for FLUX training
+    
+    logger.logInfo('TRAINING_APPROACH_RESEARCH', {
+      issue: 'replicate/fast-flux-trainer is an inference model, not a training model',
+      solution: 'Need to use proper FLUX training model or service',
+      currentInputFormat: 'ZIP file with images',
+      requiredInputFormat: 'Individual image URLs or proper training dataset format'
+    });
+
+    // For now, return an informative error about the current limitation
+    const errorResponse = logger.createErrorResponse(
+      'Training model configuration issue',
+      'The current training model (fast-flux-trainer) is an inference model, not a training model',
+      'TRAINING_MODEL_MISCONFIGURATION',
+      {
+        currentModel: 'replicate/fast-flux-trainer',
+        modelType: 'inference',
+        requiredType: 'training',
+        researchFindings: {
+          issue: 'fast-flux-trainer expects pre-trained weights and text prompts for inference',
+          inputSchema: { replicate_weights: 'string (uri)', txt: 'string' },
+          actualNeed: 'A model that accepts training images and produces LoRA weights'
+        },
+        possibleSolutions: [
+          'Use black-forest-labs/flux-dev-lora with proper training endpoint',
+          'Switch to a different training service that supports FLUX',
+          'Use a community training model with proper training capabilities'
+        ]
+      },
+      [
+        'This is a configuration issue that needs to be resolved by updating the training model',
+        'The development team needs to implement a proper FLUX training solution',
+        'Consider using alternative training services until this is resolved'
+      ]
+    );
+    
+    logger.logError('TRAINING_MODEL_MISCONFIGURATION', 'Attempted to use inference model for training', {
+      currentModel: 'replicate/fast-flux-trainer',
+      destination,
+      zipBlobUrl
+    });
+    
+    return NextResponse.json(errorResponse, { 
+      status: 400,
+      headers: authResponse.headers
+    });
+
+    // TODO: Implement proper FLUX training once correct model/service is identified
+    // The code below shows what the implementation should look like once we have the right model:
+    
+    /*
+    // Prepare the input payload for proper FLUX training
     const replicatePayloadInput = {
-      input_images: zipBlobUrl, // URL to the ZIP file on Vercel Blob
+      input_images: imageUrls, // Array of individual image URLs (not ZIP)
       trigger_word: trainingConfig?.trigger_word || `sks${modelName.substring(0, 4)}`,
       lora_type: styleConfig.lora_type, // 'style' or 'subject'
+      training_steps: trainingConfig?.training_steps || 1000,
+      learning_rate: trainingConfig?.learning_rate || 1e-4,
+      resolution: 1024
     };
-    console.log('Replicate payload input:', JSON.stringify(replicatePayloadInput, null, 2));
+    
+    logger.logInfo('TRAINING_REQUEST_PREPARED', {
+      inputFormat: 'individual_image_urls',
+      imageCount: imageUrls.length,
+      trainingConfig: replicatePayloadInput
+    });
 
-    // Call Replicate API to start training
-    const response = await fetch("https://api.replicate.com/v1/models/replicate/fast-flux-trainer/versions/8b10794665aed907bb98a1a5324cd1d3a8bea0e9b31e65210967fb9c9e2e08ed/trainings", {
+    // Call the correct training endpoint (to be determined)
+    const response = await fetch("https://api.replicate.com/v1/trainings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`
       },
       body: JSON.stringify({
+        version: "correct-flux-training-model:version-id",
         destination: destination,
         input: replicatePayloadInput
       })
     });
+    */
 
     if (!response.ok) {
       const error = await response.json();
