@@ -37,21 +37,21 @@
   - Confirm foreign key relationships work as expected in TypeScript
   - _Requirements: 1.2, 1.4, 7.2_
 
-- [ ] 7. Test database operations through existing API endpoints
+- [x] 7. Test database operations through existing API endpoints
   - Test credits operations (read, update, insert)
   - Test models operations (create, read, update, delete)
   - Test samples operations (create, read through model relationship)
   - Test images operations (create, read through model relationship)
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3_
 
-- [ ] 8. Verify Row Level Security enforcement
+- [x] 8. Verify Row Level Security enforcement
   - Test that users can only access their own credits
   - Test that users can only access their own models
   - Test that users cannot access other users' samples or images
   - Test that service role can perform elevated operations
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 9. Test webhook and service role operations
+- [x] 9. Test webhook and service role operations
   - Verify Replicate webhooks can update model status using service role
   - Test that image generation results can be stored via service role
   - Confirm credit updates work through payment webhooks
