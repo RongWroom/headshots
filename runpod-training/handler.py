@@ -11,7 +11,7 @@ import requests
 import tempfile
 import shutil
 from pathlib import Path
-from flux_trainer import FluxLoRATrainer
+from simple_flux_trainer import SimpleFluxTrainer
 from face_processor import FaceProcessor
 
 def download_images(image_urls, temp_dir):
@@ -113,26 +113,15 @@ def handler(event):
         with tempfile.TemporaryDirectory() as temp_dir:
             print(f"📁 Working directory: {temp_dir}")
             
-            # Download and process images
-            image_paths = download_images(image_urls, temp_dir)
-            
-            if len(image_paths) < 5:
-                return {
-                    "error": f"Insufficient valid images. Got {len(image_paths)}, need at least 5.",
-                    "details": "Images must contain clear, well-lit faces for high-quality training"
-                }
-            
-            # Initialize trainer
-            trainer = FluxLoRATrainer(
-                model_name="black-forest-labs/FLUX.1-dev",
-                output_dir=os.path.join(temp_dir, "output"),
-                **training_config
+            # Initialize simple trainer
+            trainer = SimpleFluxTrainer(
+                output_dir=os.path.join(temp_dir, "output")
             )
             
             # Train the model
             print("🎯 Starting LoRA training...")
             model_path = trainer.train(
-                image_paths=image_paths,
+                image_urls=input_data["image_urls"],  # Use URLs directly
                 trigger_word=trigger_word,
                 style_prompt=style_prompt
             )

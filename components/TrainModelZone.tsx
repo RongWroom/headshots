@@ -245,7 +245,7 @@ export default function TrainModelZone({ packSlug }: TrainModelZoneProps) {
       console.log('Starting model training with URLs:', imageUrls);
 
       // Call our training API
-      const trainingResponse = await fetch('/api/replicate/train', {
+      const trainingResponse = await fetch('/api/runpod/train', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,21 +12,21 @@ IMAGE_NAME="flux-headshot-trainer"
 TAG="latest"
 FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}:${TAG}"
 
-# Build the Docker image
+# Build the Docker image for AMD64 platform (RunPod uses x86_64 GPUs)
 echo "🔨 Building Docker image: ${FULL_IMAGE_NAME}"
-docker build --no-cache -t ${FULL_IMAGE_NAME} .
+docker build --platform linux/amd64 --no-cache -t ${FULL_IMAGE_NAME} .
 
 # Test the image locally (optional)
 echo "🧪 Testing image locally..."
 docker run --rm ${FULL_IMAGE_NAME} python -c "
-import torch
-import diffusers
-import peft
+import requests
+import runpod
+from PIL import Image
 print('✅ All dependencies loaded successfully')
-print(f'PyTorch version: {torch.__version__}')
-print(f'CUDA available: {torch.cuda.is_available()}')
-print(f'Diffusers version: {diffusers.__version__}')
-print(f'PEFT version: {peft.__version__}')
+print('Requests available:', requests.__version__)
+print('RunPod available:', runpod.__version__)
+print('PIL available:', Image.__version__)
+print('Handler ready for deployment!')
 "
 
 # Push to Docker Hub

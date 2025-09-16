@@ -5,10 +5,9 @@ Implements advanced training techniques for 4K-capable headshot generation
 
 import torch
 import torch.nn.functional as F
-from diffusers import FluxPipeline, DDPMScheduler
+from diffusers import FluxPipeline
 from diffusers.optimization import get_scheduler
 from peft import LoraConfig, get_peft_model, TaskType
-from transformers import CLIPTextModel, CLIPTokenizer
 from PIL import Image
 import os
 import json
