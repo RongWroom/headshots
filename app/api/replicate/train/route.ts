@@ -11,6 +11,8 @@ import {
   validateTrainingModelConfig,
   getRecommendedTrainingParams 
 } from '@/lib/training-validation';
+import { replicateApiWithRetry, replicateCircuitBreaker, apiHealthMonitor } from '@/lib/retry-utils';
+import { alertServiceDown, alertCircuitBreakerOpen, alertTrainingFailure } from '@/lib/alerting';
 
 export const dynamic = "force-dynamic";
 
@@ -279,7 +281,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // Step 1: Attempt to create the Replicate model destination
+    // Step 1: Attempt to create the Replicate model destination with retry logic
     logger.logInfo('MODEL_CREATION_START', { destination });
     
     try {
@@ -296,90 +298,95 @@ export async function POST(req: Request) {
         hasToken: !!process.env.REPLICATE_API_TOKEN
       });
       
-      const createModelResponse = await fetch("https://api.replicate.com/v1/models", {
-        method: "POST",
-        headers: {
-          "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(modelPayload),
+      const createModelResult = await replicateCircuitBreaker.execute(async () => {
+        return await replicateApiWithRetry("https://api.replicate.com/v1/models", {
+          method: "POST",
+          body: JSON.stringify(modelPayload),
+        }, {
+          maxRetries: 3,
+          baseDelay: 2000,
+          onRetry: (attempt, error) => {
+            logger.logWarning('MODEL_CREATION_RETRY', `Retry attempt ${attempt}`, {
+              attempt,
+              error: extractErrorDetails(error),
+              destination
+            });
+          }
+        });
       });
 
-      const responseData = await createModelResponse.json();
-      logApiResponse(logger, 'MODEL_CREATION_RESPONSE', createModelResponse, responseData);
+      if (!createModelResult.success) {
+        throw createModelResult.error;
+      }
 
-      if (createModelResponse.ok) { // Typically 200 OK or 201 Created
-        logger.logSuccess('MODEL_CREATION_SUCCESS', {
-          modelUrl: responseData.url,
-          modelName: responseData.name,
-          owner: responseData.owner
+      const responseData = createModelResult.data;
+      
+      logger.logSuccess('MODEL_CREATION_RESPONSE', {
+        attempts: createModelResult.attempts,
+        totalTime: createModelResult.totalTime,
+        responseData
+      });
+
+      logger.logSuccess('MODEL_CREATION_SUCCESS', {
+        modelUrl: responseData.url,
+        modelName: responseData.name,
+        owner: responseData.owner,
+        attempts: createModelResult.attempts,
+        totalTime: createModelResult.totalTime
+      });
+    } catch (modelCreationError) {
+      // Handle specific error types from retry logic
+      let errorCode = 'MODEL_CREATION_ERROR';
+      let suggestions = [
+        'Check your internet connection',
+        'Verify Replicate API credentials',
+        'Try again in a few moments',
+        'Contact support if the issue persists'
+      ];
+
+      if (modelCreationError.message?.includes('Circuit breaker is OPEN')) {
+        errorCode = 'SERVICE_UNAVAILABLE';
+        suggestions = [
+          'Replicate service is temporarily unavailable',
+          'Try again in a few minutes',
+          'Check Replicate status page for service updates'
+        ];
+        
+        // Send alert for circuit breaker
+        await alertCircuitBreakerOpen('replicate', {
+          operation: 'model-creation',
+          destination,
+          error: extractErrorDetails(modelCreationError)
+        });
+      } else if (modelCreationError.message?.includes('already exists')) {
+        // Model already exists, continue with training
+        logger.logWarning('MODEL_ALREADY_EXISTS', `Model ${destination} already exists, proceeding with training`, {
+          destination,
+          error: extractErrorDetails(modelCreationError)
         });
       } else {
-        // Check common Replicate error patterns for "already exists"
-        let modelExists = false;
-        const errorMessage = responseData.detail || (responseData.errors && responseData.errors[0]?.detail) || responseData.message || '';
-        if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes("already exists")) {
-            modelExists = true;
-        }
-
-        if (modelExists) {
-          logger.logWarning('MODEL_ALREADY_EXISTS', `Model ${destination} already exists, proceeding with training`, {
+        const errorResponse = logger.createErrorResponse(
+          'Model creation error',
+          'Failed to create Replicate model destination after retries',
+          errorCode,
+          { 
+            error: extractErrorDetails(modelCreationError),
             destination,
-            errorMessage
-          });
-        } else {
-          const errorResponse = logger.createErrorResponse(
-            'Model creation failed',
-            'Failed to create Replicate model destination',
-            'MODEL_CREATION_FAILED',
-            { 
-              replicateError: responseData,
-              destination,
-              statusCode: createModelResponse.status
-            },
-            [
-              'Check if the model name is already taken',
-              'Verify REPLICATE_USERNAME is correctly configured',
-              'Ensure you have permission to create models',
-              'Try using a different model name'
-            ]
-          );
-          
-          logger.logError('MODEL_CREATION_FAILED', `HTTP ${createModelResponse.status}`, {
-            replicateError: responseData,
-            destination
-          });
-          
-          return NextResponse.json(errorResponse, { 
-            status: createModelResponse.status, 
-            headers: authResponse.headers 
-          });
-        }
+            circuitBreakerState: replicateCircuitBreaker.getState()
+          },
+          suggestions
+        );
+        
+        logger.logError('MODEL_CREATION_ERROR', modelCreationError, { 
+          destination,
+          circuitBreakerState: replicateCircuitBreaker.getState()
+        });
+        
+        return NextResponse.json(errorResponse, { 
+          status: 500,
+          headers: authResponse.headers
+        });
       }
-    } catch (modelCreationError) {
-      const errorResponse = logger.createErrorResponse(
-        'Model creation error',
-        'Unexpected error during model creation',
-        'MODEL_CREATION_ERROR',
-        { 
-          error: extractErrorDetails(modelCreationError),
-          destination
-        },
-        [
-          'Check your internet connection',
-          'Verify Replicate API credentials',
-          'Try again in a few moments',
-          'Contact support if the issue persists'
-        ]
-      );
-      
-      logger.logError('MODEL_CREATION_ERROR', modelCreationError, { destination });
-      
-      const response = NextResponse.json(errorResponse, { status: 500 });
-      for (const [key, value] of authResponse.headers.entries()) {
-        errorResponse.headers.set(key, value);
-      }
-      return errorResponse;
     }
 
     // Step 2: Fetch images, create ZIP, and upload to Vercel Blob

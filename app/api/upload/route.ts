@@ -1,5 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { blobOperationWithRetry, blobCircuitBreaker } from '@/lib/retry-utils';
 
 export const runtime = 'edge';
 
@@ -118,6 +119,88 @@ export async function POST(request: Request): Promise<NextResponse> {
       
       return NextResponse.json(errorResponse, { status: 400 });
     }
+
+    // Validate file format
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    const fileExtension = filename.split('.').pop()?.toLowerCase();
+    
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      const errorResponse = createErrorResponse(
+        'Invalid file format',
+        `File format '${fileExtension || 'unknown'}' is not supported`,
+        'INVALID_FILE_FORMAT',
+        requestId,
+        { 
+          filename,
+          detectedExtension: fileExtension,
+          allowedExtensions,
+          contentType
+        },
+        [
+          `Use one of the supported formats: ${allowedExtensions.join(', ')}`,
+          'Ensure the file extension matches the actual file format',
+          'Convert your image to a supported format before uploading'
+        ]
+      );
+      
+      logError(requestId, 'VALIDATION_FAILED', 'Invalid file format', { filename, fileExtension, allowedExtensions });
+      
+      return NextResponse.json(errorResponse, { status: 400 });
+    }
+
+    // Validate file size (individual file limit)
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const fileSizeStr = contentLength;
+    const fileSize = fileSizeStr ? parseInt(fileSizeStr, 10) : 0;
+    
+    if (fileSize > maxFileSize) {
+      const errorResponse = createErrorResponse(
+        'File too large',
+        `File size ${(fileSize / 1024 / 1024).toFixed(2)}MB exceeds the maximum allowed size of ${maxFileSize / 1024 / 1024}MB`,
+        'FILE_TOO_LARGE',
+        requestId,
+        { 
+          fileSize,
+          maxFileSize,
+          fileSizeMB: (fileSize / 1024 / 1024).toFixed(2),
+          maxFileSizeMB: maxFileSize / 1024 / 1024
+        },
+        [
+          'Compress your image to reduce file size',
+          'Use a lower resolution or quality setting',
+          'Try uploading a different image'
+        ]
+      );
+      
+      logError(requestId, 'VALIDATION_FAILED', 'File too large', { fileSize, maxFileSize });
+      
+      return NextResponse.json(errorResponse, { status: 400 });
+    }
+
+    // Validate content type
+    const allowedContentTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (contentType && !allowedContentTypes.includes(contentType)) {
+      const errorResponse = createErrorResponse(
+        'Invalid content type',
+        `Content type '${contentType}' is not supported`,
+        'INVALID_CONTENT_TYPE',
+        requestId,
+        { 
+          contentType,
+          allowedContentTypes,
+          filename
+        },
+        [
+          `Use one of the supported content types: ${allowedContentTypes.join(', ')}`,
+          'Ensure your file is actually an image',
+          'Check that the file is not corrupted'
+        ]
+      );
+      
+      logError(requestId, 'VALIDATION_FAILED', 'Invalid content type', { contentType, allowedContentTypes });
+      
+      return NextResponse.json(errorResponse, { status: 400 });
+    }
     
     // Validate request body
     if (!request.body) {
@@ -170,24 +253,46 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     
     try {
-      // Attempt blob upload
+      // Attempt blob upload with retry logic and circuit breaker
       logSuccess(requestId, 'BLOB_UPLOAD_START', {
         filename: uniqueFilename,
         contentType: contentType || 'application/octet-stream'
       });
 
-      const blob = await put(uniqueFilename, request.body as ReadableStream, {
-        access: 'public',
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-        contentType: contentType || 'application/octet-stream',
+      const uploadResult = await blobCircuitBreaker.execute(async () => {
+        return await blobOperationWithRetry(async () => {
+          return await put(uniqueFilename, request.body as ReadableStream, {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+            contentType: contentType || 'application/octet-stream',
+          });
+        }, {
+          maxRetries: 3,
+          baseDelay: 1000,
+          onRetry: (attempt, error) => {
+            logError(requestId, `BLOB_UPLOAD_RETRY_${attempt}`, error, {
+              filename: uniqueFilename,
+              attempt,
+              error: error.message
+            });
+          }
+        });
       });
+
+      if (!uploadResult.success) {
+        throw uploadResult.error;
+      }
+
+      const blob = uploadResult.data!;
       
       // Log successful upload
       logSuccess(requestId, 'BLOB_UPLOAD_SUCCESS', {
         url: blob.url,
         downloadUrl: blob.downloadUrl,
         pathname: blob.pathname,
-        size: blob.size
+        size: blob.size,
+        attempts: uploadResult.attempts,
+        totalTime: uploadResult.totalTime
       });
       
       // Return success response with additional metadata
@@ -196,7 +301,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         requestId,
         timestamp: new Date().toISOString(),
         originalFilename: filename,
-        modelName
+        modelName,
+        uploadMetadata: {
+          attempts: uploadResult.attempts,
+          totalTime: uploadResult.totalTime
+        }
       });
       
     } catch (blobError) {

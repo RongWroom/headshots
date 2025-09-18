@@ -33,11 +33,13 @@ export class Logger {
   private endpoint: string;
   private requestId: string;
   private userId?: string;
+  private startTime: number;
 
   constructor(endpoint: string, requestId?: string, userId?: string) {
     this.endpoint = endpoint;
     this.requestId = requestId || this.generateRequestId();
     this.userId = userId;
+    this.startTime = Date.now();
   }
 
   private generateRequestId(): string {
@@ -107,6 +109,50 @@ export class Logger {
 
   setUserId(userId: string) {
     this.userId = userId;
+  }
+
+  /**
+   * Record metrics for monitoring (async to avoid blocking)
+   */
+  async recordMetric(operation: string, success: boolean, error?: string) {
+    try {
+      const responseTime = Date.now() - this.startTime;
+      
+      // Record metric asynchronously
+      fetch('/api/monitoring/metrics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation: `${this.endpoint}.${operation}`,
+          success,
+          responseTime,
+          error
+        })
+      }).catch(() => {
+        // Silently fail - don't let metrics recording break the main flow
+      });
+    } catch {
+      // Silently fail - metrics are not critical
+    }
+  }
+
+  /**
+   * Log and record success metric
+   */
+  async logSuccessWithMetric(stage: string, operation: string, data?: any) {
+    this.logSuccess(stage, data);
+    await this.recordMetric(operation, true);
+  }
+
+  /**
+   * Log and record error metric
+   */
+  async logErrorWithMetric(stage: string, operation: string, error: any, data?: any) {
+    this.logError(stage, error, data);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await this.recordMetric(operation, false, errorMessage);
   }
 }
 
