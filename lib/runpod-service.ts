@@ -265,26 +265,46 @@ export class RunPodTrainingService {
   private logger: Logger;
   private circuitBreaker: CircuitBreaker;
   private healthMonitor: ApiHealthMonitor;
-  private endpoint: string;
-  private apiKey: string;
+  private endpoint?: string;
+  private apiKey?: string;
+  private initialized = false;
 
   constructor() {
     this.logger = new Logger('RUNPOD_SERVICE');
     this.circuitBreaker = new CircuitBreaker(5, 60000, 300000); // 5 failures, 1min recovery, 5min window
     this.healthMonitor = new ApiHealthMonitor(300000); // 5 minute check interval
-    
-    this.endpoint = process.env.RUNPOD_TRAINING_ENDPOINT!;
-    this.apiKey = process.env.RUNPOD_API_KEY!;
+  }
+
+  /**
+   * Initialize the service with environment variables
+   * This is called lazily to avoid build-time errors
+   */
+  private initialize(): void {
+    if (this.initialized) return;
+
+    this.endpoint = process.env.RUNPOD_TRAINING_ENDPOINT;
+    this.apiKey = process.env.RUNPOD_API_KEY;
     
     if (!this.endpoint || !this.apiKey) {
       throw new Error('RunPod configuration missing: RUNPOD_TRAINING_ENDPOINT and RUNPOD_API_KEY required');
     }
+
+    this.initialized = true;
+  }
+
+  /**
+   * Check if RunPod is configured
+   */
+  isConfigured(): boolean {
+    return !!(process.env.RUNPOD_TRAINING_ENDPOINT && process.env.RUNPOD_API_KEY);
   }
 
   /**
    * Start training with comprehensive error handling and retry logic
    */
   async startTraining(request: RunPodTrainingRequest): Promise<RunPodTrainingResponse> {
+    this.initialize();
+    
     this.logger.logInfo('RUNPOD_TRAINING_START', {
       modelName: request.input.model_name,
       imageCount: request.input.image_urls.length,
@@ -378,6 +398,8 @@ export class RunPodTrainingService {
    * Get training status with retry logic
    */
   async getTrainingStatus(trainingId: string): Promise<RunPodStatusResponse> {
+    this.initialize();
+    
     this.logger.logInfo('RUNPOD_STATUS_CHECK', { trainingId });
 
     const retryOptions: RetryOptions = {
@@ -427,6 +449,8 @@ export class RunPodTrainingService {
    * Cancel training with retry logic
    */
   async cancelTraining(trainingId: string): Promise<void> {
+    this.initialize();
+    
     this.logger.logInfo('RUNPOD_CANCEL_TRAINING', { trainingId });
 
     const retryOptions: RetryOptions = {
@@ -463,12 +487,19 @@ export class RunPodTrainingService {
    * Check service health
    */
   async checkHealth(): Promise<boolean> {
+    if (!this.isConfigured()) {
+      this.logger.logWarning('RUNPOD_NOT_CONFIGURED', 'RunPod service not configured');
+      return false;
+    }
+
+    this.initialize();
+    
     return await this.healthMonitor.checkHealth('runpod', async () => {
       try {
         const response = await fetch(`${this.endpoint}/health`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'Authorization': `Bearer ${this.apiKey!}`,
           },
           signal: AbortSignal.timeout(10000) // 10 second timeout
         });
@@ -499,10 +530,10 @@ export class RunPodTrainingService {
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.endpoint!, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey!}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(request),
@@ -544,10 +575,10 @@ export class RunPodTrainingService {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     try {
-      const response = await fetch(`${this.endpoint}/${trainingId}`, {
+      const response = await fetch(`${this.endpoint!}/${trainingId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey!}`,
         },
         signal: controller.signal
       });
@@ -586,10 +617,10 @@ export class RunPodTrainingService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
-      const response = await fetch(`${this.endpoint}/${trainingId}/cancel`, {
+      const response = await fetch(`${this.endpoint!}/${trainingId}/cancel`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey!}`,
         },
         signal: controller.signal
       });

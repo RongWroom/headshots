@@ -18,9 +18,12 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const detailed = url.searchParams.get('detailed') === 'true';
     
-    // Get current health status
-    const isHealthy = await runPodService.checkHealth();
-    const healthStatus = runPodService.getHealthStatus();
+    // Check if RunPod is configured
+    const isConfigured = runPodService.isConfigured();
+    
+    // Get current health status (only if configured)
+    const isHealthy = isConfigured ? await runPodService.checkHealth() : false;
+    const healthStatus = isConfigured ? runPodService.getHealthStatus() : { configured: false };
     
     // Get all service health data
     const allHealthData = apiHealthMonitor.getAllHealthStatus();
@@ -28,11 +31,12 @@ export async function GET(request: Request) {
     // Basic health response
     const healthResponse: any = {
       service: 'RunPod Training Service',
-      status: isHealthy ? 'healthy' : 'unhealthy',
+      status: isConfigured ? (isHealthy ? 'healthy' : 'unhealthy') : 'not-configured',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       runpod: {
-        isHealthy,
+        configured: isConfigured,
+        isHealthy: isConfigured ? isHealthy : null,
         ...healthStatus,
         endpoint: process.env.RUNPOD_TRAINING_ENDPOINT ? 'configured' : 'missing',
         apiKey: process.env.RUNPOD_API_KEY ? 'configured' : 'missing'
@@ -60,12 +64,13 @@ export async function GET(request: Request) {
     
     logger.logSuccess('RUNPOD_HEALTH_CHECK_COMPLETE', {
       isHealthy,
-      circuitBreakerState: healthStatus.circuitBreaker?.state,
-      consecutiveFailures: healthStatus.consecutiveFailures
+      configured: isConfigured,
+      circuitBreakerState: isConfigured && 'circuitBreaker' in healthStatus ? healthStatus.circuitBreaker?.state : 'not-configured',
+      consecutiveFailures: isConfigured && 'consecutiveFailures' in healthStatus ? healthStatus.consecutiveFailures : 0
     });
     
     // Return appropriate HTTP status
-    const httpStatus = isHealthy ? 200 : 503;
+    const httpStatus = isConfigured ? (isHealthy ? 200 : 503) : 200; // 200 for not-configured to avoid build failures
     
     return NextResponse.json(healthResponse, { status: httpStatus });
     
