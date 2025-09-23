@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     }
 
     // Get all metrics
-    const allMetrics = globalMetricsStore.getMetrics();
+    const allMetrics = globalMetricsStore.getMetrics() || {};
     const systemSummary = globalMetricsStore.getSystemSummary();
     const healthStatuses = apiHealthMonitor.getAllHealthStatus();
 
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 /**
  * Generate alerts based on metrics and health status
  */
-function generateAlerts(metrics: Record<string, any>, healthStatuses: Record<string, any>): Array<{
+function generateAlerts(metrics: Record<string, any> | null, healthStatuses: Record<string, any>): Array<{
   level: 'warning' | 'critical';
   message: string;
   operation?: string;
@@ -111,7 +111,8 @@ function generateAlerts(metrics: Record<string, any>, healthStatuses: Record<str
   }> = [];
 
   // Check operation success rates
-  for (const [operation, metric] of Object.entries(metrics)) {
+  if (metrics) {
+    for (const [operation, metric] of Object.entries(metrics)) {
     if (metric.totalRequests >= 10) { // Only alert if we have enough data
       if (metric.successRate < 50) {
         alerts.push({
@@ -128,13 +129,14 @@ function generateAlerts(metrics: Record<string, any>, healthStatuses: Record<str
       }
     }
 
-    // Check response times
-    if (metric.averageResponseTime > 10000) { // 10 seconds
-      alerts.push({
-        level: 'warning',
-        message: `Operation ${operation} has high response time: ${(metric.averageResponseTime / 1000).toFixed(1)}s`,
-        operation
-      });
+      // Check response times
+      if (metric.averageResponseTime > 10000) { // 10 seconds
+        alerts.push({
+          level: 'warning',
+          message: `Operation ${operation} has high response time: ${(metric.averageResponseTime / 1000).toFixed(1)}s`,
+          operation
+        });
+      }
     }
   }
 
@@ -161,7 +163,7 @@ function generateAlerts(metrics: Record<string, any>, healthStatuses: Record<str
 /**
  * Convert metrics to Prometheus format
  */
-function convertToPrometheusFormat(metrics: Record<string, any>, summary: any): string {
+function convertToPrometheusFormat(metrics: Record<string, any> | null, summary: any): string {
   let output = '';
   
   // System summary metrics
@@ -178,7 +180,8 @@ function convertToPrometheusFormat(metrics: Record<string, any>, summary: any): 
   output += `system_avg_response_time ${summary.averageResponseTime}\n\n`;
 
   // Per-operation metrics
-  for (const [operation, metric] of Object.entries(metrics)) {
+  if (metrics) {
+    for (const [operation, metric] of Object.entries(metrics)) {
     const sanitizedOp = operation.replace(/[^a-zA-Z0-9_]/g, '_');
     
     output += `# HELP operation_requests_total Total requests for operation\n`;
@@ -189,9 +192,10 @@ function convertToPrometheusFormat(metrics: Record<string, any>, summary: any): 
     output += `# TYPE operation_success_rate gauge\n`;
     output += `operation_success_rate{operation="${operation}"} ${metric.successRate / 100}\n\n`;
     
-    output += `# HELP operation_avg_response_time Average response time for operation\n`;
-    output += `# TYPE operation_avg_response_time gauge\n`;
-    output += `operation_avg_response_time{operation="${operation}"} ${metric.averageResponseTime}\n\n`;
+      output += `# HELP operation_avg_response_time Average response time for operation\n`;
+      output += `# TYPE operation_avg_response_time gauge\n`;
+      output += `operation_avg_response_time{operation="${operation}"} ${metric.averageResponseTime}\n\n`;
+    }
   }
 
   return output;
