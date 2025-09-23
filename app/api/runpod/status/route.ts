@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { runPodService } from '@/lib/runpod-service';
 import { Logger, extractErrorDetails } from '@/lib/logger';
+import { costTrackingService } from '@/lib/cost-tracking';
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,11 @@ export async function GET(request: Request) {
         executionTime: statusResult.executionTime,
         delayTime: statusResult.delayTime
       });
+
+      // Record actual training cost if training is completed
+      if (statusResult.status === 'COMPLETED' && statusResult.executionTime) {
+        await recordTrainingCost(trainingId, statusResult, user.id, logger);
+      }
 
     } catch (statusError: any) {
       // The RunPod service provides user-friendly error messages
@@ -356,5 +362,95 @@ function formatDuration(ms: number): string {
     return `${minutes}m ${seconds % 60}s`;
   } else {
     return `${seconds}s`;
+  }
+}
+
+/**
+ * Record actual training cost when training completes
+ */
+async function recordTrainingCost(trainingId: string, statusResult: any, userId: string, logger: Logger) {
+  try {
+    // Check if cost has already been recorded for this training
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get() { return undefined; },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
+    const { data: existingCost } = await supabase
+      .from('training_costs')
+      .select('id')
+      .eq('training_id', trainingId)
+      .single();
+
+    if (existingCost) {
+      logger.logInfo('COST_ALREADY_RECORDED', { trainingId, costId: existingCost.id });
+      return;
+    }
+
+    // Get model information
+    const { data: model } = await supabase
+      .from('models')
+      .select('id')
+      .eq('modelId', trainingId)
+      .single();
+
+    if (!model) {
+      logger.logWarning('MODEL_NOT_FOUND_FOR_COST_TRACKING', { trainingId });
+      return;
+    }
+
+    // Calculate actual cost based on execution time
+    const executionTimeMinutes = Math.ceil(statusResult.executionTime / 1000 / 60);
+    const gpuCostPerHour = 0.79; // RTX 4090 cost per hour
+    const gpuCost = (executionTimeMinutes / 60) * gpuCostPerHour;
+    const storageCost = 0.01; // Minimal storage cost
+    const networkCost = 0.02; // Minimal network cost
+    const serviceFee = (gpuCost + storageCost + networkCost) * 0.05; // 5% service fee
+    const totalCost = gpuCost + storageCost + networkCost + serviceFee;
+
+    const trainingStartTime = new Date(Date.now() - statusResult.executionTime - (statusResult.delayTime || 0));
+    const trainingEndTime = new Date();
+
+    await costTrackingService.recordTrainingCost({
+      modelId: model.id,
+      userId,
+      trainingId,
+      serviceProvider: 'runpod',
+      gpuType: 'RTX 4090',
+      trainingStartTime,
+      trainingEndTime,
+      trainingDurationMinutes: executionTimeMinutes,
+      gpuCostPerHour,
+      totalCost: Math.round(totalCost * 100) / 100,
+      currency: 'USD',
+      costBreakdown: {
+        gpuCost: Math.round(gpuCost * 100) / 100,
+        storageCost: Math.round(storageCost * 100) / 100,
+        networkCost: Math.round(networkCost * 100) / 100,
+        serviceFee: Math.round(serviceFee * 100) / 100
+      },
+      trainingParameters: {
+        executionTime: statusResult.executionTime,
+        delayTime: statusResult.delayTime
+      },
+      status: 'completed'
+    });
+
+    logger.logSuccess('TRAINING_COST_RECORDED', {
+      trainingId,
+      totalCost: Math.round(totalCost * 100) / 100,
+      executionTimeMinutes
+    });
+
+  } catch (error) {
+    logger.logError('COST_RECORDING_FAILED', error, { trainingId });
+    // Don't fail the status request if cost recording fails
   }
 }

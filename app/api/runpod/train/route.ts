@@ -5,6 +5,7 @@ import { trainRequestSchema } from '@/types/training';
 import { Logger, extractErrorDetails } from '@/lib/logger';
 import { ParameterOptimizationService } from '@/lib/parameter-optimization';
 import { runPodService, RunPodTrainingRequest } from '@/lib/runpod-service';
+import { costTrackingService } from '@/lib/cost-tracking';
 
 export const dynamic = "force-dynamic";
 
@@ -269,6 +270,36 @@ export async function POST(req: Request) {
       abTestInfo: optimizationResult.abTestInfo
     });
 
+    // Generate cost estimate before starting training
+    logger.logInfo('COST_ESTIMATE_START');
+    let costEstimate;
+    try {
+      costEstimate = await costTrackingService.generateCostEstimate({
+        serviceProvider: 'runpod',
+        imageCount: imageUrls.length,
+        trainingParameters: {
+          resolution: optimizationResult.selectedParameters.resolution,
+          maxTrainSteps: optimizationResult.selectedParameters.max_train_steps,
+          loraRank: optimizationResult.selectedParameters.lora_rank,
+          trainBatchSize: optimizationResult.selectedParameters.train_batch_size,
+          gpuType: 'RTX 4090' // Default GPU type for RunPod
+        },
+        userId
+      });
+      
+      logger.logSuccess('COST_ESTIMATE_GENERATED', {
+        estimateId: costEstimate.id,
+        estimatedCost: costEstimate.estimatedCost,
+        estimatedTime: costEstimate.estimatedTrainingTimeMinutes
+      });
+    } catch (costError: any) {
+      logger.logWarning('COST_ESTIMATE_FAILED', {
+        error: extractErrorDetails(costError),
+        message: 'Continuing without cost estimate'
+      });
+      // Continue without cost estimate - don't fail the training
+    }
+
     // Send request to RunPod using the enhanced service with retry logic and error handling
     logger.logInfo('RUNPOD_REQUEST_START');
     
@@ -325,8 +356,9 @@ export async function POST(req: Request) {
         triggerWord,
         styleDescription: styleConfig.description,
         imageCount: imageUrls.length,
-        estimatedTime: `${optimizationResult.costEstimate.estimatedMinutes} minutes`,
-        estimatedCost: optimizationResult.costEstimate.estimatedCost,
+        estimatedTime: costEstimate ? `${costEstimate.estimatedTrainingTimeMinutes} minutes` : `${optimizationResult.costEstimate.estimatedMinutes} minutes`,
+        estimatedCost: costEstimate ? costEstimate.estimatedCost : optimizationResult.costEstimate.estimatedCost,
+        costBreakdown: costEstimate?.costBreakdown,
         trainingSteps: runpodPayload.input.training_config.max_train_steps,
         loraRank: runpodPayload.input.training_config.lora_rank,
         learningRate: runpodPayload.input.training_config.learning_rate,
