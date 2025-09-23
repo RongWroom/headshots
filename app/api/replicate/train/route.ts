@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         modelName: requestData.modelName,
         packSlug: requestData.packSlug
       });
-    } catch (parseError) {
+    } catch (parseError: any) {
       const errorResponse = logger.createErrorResponse(
         'Invalid JSON',
         'Request body contains invalid JSON',
@@ -338,7 +338,7 @@ export async function POST(req: Request) {
         attempts: createModelResult.attempts,
         totalTime: createModelResult.totalTime
       });
-    } catch (modelCreationError) {
+    } catch (modelCreationError: any) {
       // Handle specific error types from retry logic
       let errorCode = 'MODEL_CREATION_ERROR';
       let suggestions = [
@@ -405,7 +405,7 @@ export async function POST(req: Request) {
           const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
           zip.file(filename, response.data);
           console.log(`Added ${filename} to ZIP.`);
-        } catch (fetchError) {
+        } catch (fetchError: any) {
           console.error(`Failed to fetch image ${imageUrl}:`, fetchError);
           // Optionally, decide if one failed image should stop the whole process
           // For now, we'll log and continue, Replicate might handle missing images gracefully or error out
@@ -423,7 +423,7 @@ export async function POST(req: Request) {
       zipBlobUrl = blob.url;
       console.log(`ZIP file uploaded to Vercel Blob: ${zipBlobUrl}`);
 
-    } catch (zipError) {
+    } catch (zipError: any) {
       console.error('Error creating or uploading ZIP file:', zipError);
       const errorResponse = NextResponse.json(
         { 
@@ -549,7 +549,7 @@ export async function POST(req: Request) {
 
     return successResponse;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Training error:', error);
     const errorResponse = NextResponse.json(
       { 
