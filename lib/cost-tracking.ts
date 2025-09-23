@@ -254,7 +254,7 @@ export class CostTrackingService {
   private calculateRunPodCost(request: CostEstimateRequest): CostEstimate {
     const config = PROVIDER_CONFIGS.runpod;
     const gpuType = request.trainingParameters.gpuType || config.defaultGpuType;
-    const gpuConfig = config.gpuTypes[gpuType] || config.gpuTypes[config.defaultGpuType];
+    const gpuConfig = (config.gpuTypes as any)[gpuType] || (config.gpuTypes as any)[config.defaultGpuType];
 
     // Calculate training time
     const baseTime = config.baseTrainingTimeMinutes;
@@ -434,7 +434,7 @@ export class CostTrackingService {
       .eq('is_active', true);
 
     if (error || !alerts) {
-      this.logger.logWarning('BUDGET_ALERTS_FETCH_FAILED', { error: error?.message, userId });
+      this.logger.logWarning('BUDGET_ALERTS_FETCH_FAILED', 'Failed to fetch budget alerts', { error: error?.message, userId });
       return;
     }
 
@@ -486,7 +486,7 @@ export class CostTrackingService {
    * Trigger budget alert notification
    */
   private async triggerBudgetAlert(alert: any, currentSpending: number): Promise<void> {
-    this.logger.logWarning('BUDGET_ALERT_TRIGGERED', {
+    this.logger.logWarning('BUDGET_ALERT_TRIGGERED', 'Budget alert threshold exceeded', {
       userId: alert.user_id,
       alertType: alert.alert_type,
       threshold: alert.threshold_amount,

@@ -62,8 +62,8 @@ export class ParameterOptimizationService {
 
     // Step 2: Check for A/B test participation
     let abTestInfo: ParameterOptimizationResult['abTestInfo'];
-    let selectedParameters: OptimizedTrainingParams;
-    let parameterSet: ParameterSet;
+    let selectedParameters: OptimizedTrainingParams | undefined;
+    let parameterSet: ParameterSet | undefined;
 
     if (request.enableABTesting) {
       const abTestResult = this.checkABTestParticipation(request.userId, qualityAssessment.imageCount);
@@ -82,7 +82,7 @@ export class ParameterOptimizationService {
     }
 
     // Step 3: Select optimal parameters (if not in A/B test)
-    if (!selectedParameters!) {
+    if (!selectedParameters) {
       if (request.qualityPreset) {
         parameterSet = this.getParameterSetByPreset(request.qualityPreset);
       } else {
@@ -103,6 +103,15 @@ export class ParameterOptimizationService {
     // Step 4: Apply pack-specific optimizations
     if (request.packSlug) {
       selectedParameters = this.applyPackOptimizations(selectedParameters, request.packSlug);
+      // Update parameterSet if pack optimizations were applied
+      if (parameterSet) {
+        parameterSet = {
+          ...parameterSet,
+          params: selectedParameters,
+          name: `${parameterSet.name} (Pack Optimized)`,
+          description: `${parameterSet.description} with ${request.packSlug} optimizations`
+        };
+      }
     }
 
     // Step 5: Validate parameters
@@ -120,8 +129,8 @@ export class ParameterOptimizationService {
     );
 
     return {
-      selectedParameters,
-      parameterSet,
+      selectedParameters: selectedParameters!,
+      parameterSet: parameterSet!,
       qualityAssessment,
       validation,
       costEstimate,

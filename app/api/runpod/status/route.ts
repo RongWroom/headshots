@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     // Check service health first
     const isHealthy = await runPodService.checkHealth();
     if (!isHealthy) {
-      logger.logWarning('RUNPOD_SERVICE_UNHEALTHY', { trainingId });
+      logger.logWarning('RUNPOD_SERVICE_UNHEALTHY', 'Service health check failed', { trainingId });
     }
 
     // Get training status using the enhanced service
@@ -402,7 +402,7 @@ async function recordTrainingCost(trainingId: string, statusResult: any, userId:
       .single();
 
     if (!model) {
-      logger.logWarning('MODEL_NOT_FOUND_FOR_COST_TRACKING', { trainingId });
+      logger.logWarning('MODEL_NOT_FOUND_FOR_COST_TRACKING', 'Model not found for cost tracking', { trainingId });
       return;
     }
 

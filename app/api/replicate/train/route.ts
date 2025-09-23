@@ -521,6 +521,7 @@ export async function POST(req: Request) {
     });
     */
 
+    /*
     if (!response.ok) {
       const error = await response.json();
       console.error('Replicate API error:', error);
@@ -534,12 +535,14 @@ export async function POST(req: Request) {
     }
 
     const result = await response.json();
+    */
 
+    // Temporary placeholder response until Replicate integration is complete
     const successResponse = NextResponse.json({
       success: true,
-      trainingId: result.id,
+      trainingId: `replicate_${Date.now()}`,
       status: 'training_started',
-      message: 'Training job started successfully'
+      message: 'Training job started successfully (placeholder implementation)'
     });
 
     // Copy auth cookies to the success response

@@ -307,7 +307,7 @@ export class RunPodTrainingService {
       },
       onRetry: (attempt: number, error: any) => {
         const classifiedError = RunPodErrorHandler.classifyError(error);
-        this.logger.logWarning('RUNPOD_RETRY_ATTEMPT', {
+        this.logger.logWarning('RUNPOD_RETRY_ATTEMPT', 'Retrying RunPod request', {
           attempt,
           errorCode: classifiedError.code,
           errorMessage: classifiedError.message,
@@ -342,19 +342,19 @@ export class RunPodTrainingService {
         }
 
         this.logger.logSuccess('RUNPOD_TRAINING_STARTED', {
-          trainingId: retryResult.data.id,
+          trainingId: retryResult.data?.id,
           attempts: retryResult.attempts,
           totalTime: retryResult.totalTime
         });
 
-        return retryResult.data;
+        return retryResult.data!;
       });
 
       return result;
 
-    } catch (error) {
+    } catch (error: any) {
       // Handle circuit breaker errors
-      if (error.message.includes('Circuit breaker is OPEN')) {
+      if (error.message?.includes('Circuit breaker is OPEN')) {
         this.logger.logError('RUNPOD_CIRCUIT_BREAKER_OPEN', {
           circuitState: this.circuitBreaker.getState()
         });
@@ -416,11 +416,11 @@ export class RunPodTrainingService {
 
     this.logger.logSuccess('RUNPOD_STATUS_RETRIEVED', {
       trainingId,
-      status: retryResult.data.status,
+      status: retryResult.data?.status,
       attempts: retryResult.attempts
     });
 
-    return retryResult.data;
+    return retryResult.data!;
   }
 
   /**
@@ -475,7 +475,7 @@ export class RunPodTrainingService {
         
         return response.ok;
       } catch (error) {
-        this.logger.logWarning('RUNPOD_HEALTH_CHECK_FAILED', { error: extractErrorDetails(error) });
+        this.logger.logWarning('RUNPOD_HEALTH_CHECK_FAILED', 'Health check failed', { error: extractErrorDetails(error) });
         return false;
       }
     });
@@ -523,7 +523,7 @@ export class RunPodTrainingService {
 
       return data;
 
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
@@ -565,7 +565,7 @@ export class RunPodTrainingService {
 
       return data;
 
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
@@ -604,7 +604,7 @@ export class RunPodTrainingService {
         throw error;
       }
 
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {

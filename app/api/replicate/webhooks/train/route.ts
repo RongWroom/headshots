@@ -52,6 +52,10 @@ interface ModelWithUserEmail {
 export async function POST(request: Request) {
   const logger = new Logger('TRAINING_WEBHOOK');
   
+  // Initialize variables outside try block for error handling
+  let userId: string | undefined;
+  let modelId: string | undefined;
+  
   try {
     logger.logInfo('WEBHOOK_REQUEST_START', {
       url: request.url,
@@ -102,8 +106,8 @@ export async function POST(request: Request) {
 
     // Get IDs from query params
     const url = new URL(request.url);
-    const userId = url.searchParams.get("user_id")?.toString();
-    const modelId = url.searchParams.get("model_id")?.toString();
+    userId = url.searchParams.get("user_id")?.toString();
+    modelId = url.searchParams.get("model_id")?.toString();
 
     if (!userId || !modelId) {
       logger.logError('WEBHOOK_VALIDATION_FAILED', 'Missing required parameters', {

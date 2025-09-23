@@ -290,7 +290,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         url: blob.url,
         downloadUrl: blob.downloadUrl,
         pathname: blob.pathname,
-        size: blob.size,
+        size: fileSize,
         attempts: uploadResult.attempts,
         totalTime: uploadResult.totalTime
       });

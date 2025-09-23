@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
       .limit(10);
 
     if (notificationsError) {
-      logger.logWarning('BUDGET_NOTIFICATIONS_FETCH_FAILED', {
+      logger.logWarning('BUDGET_NOTIFICATIONS_FETCH_FAILED', 'Failed to fetch budget notifications', {
         error: notificationsError.message,
         userId
       });

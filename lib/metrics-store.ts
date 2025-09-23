@@ -77,7 +77,7 @@ export class MetricsStore {
   }
 
   getSystemSummary() {
-    const allMetrics = this.getMetrics();
+    const allMetrics = this.getMetrics() || {};
     const operations = Object.keys(allMetrics);
     
     if (operations.length === 0) {

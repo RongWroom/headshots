@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const allHealthData = apiHealthMonitor.getAllHealthStatus();
     
     // Basic health response
-    const healthResponse = {
+    const healthResponse: any = {
       service: 'RunPod Training Service',
       status: isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     
     return NextResponse.json(healthResponse, { status: httpStatus });
     
-  } catch (error) {
+  } catch (error: any) {
     logger.logError('RUNPOD_HEALTH_CHECK_ERROR', error);
     
     return NextResponse.json({
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json(testResults);
     
-  } catch (error) {
+  } catch (error: any) {
     logger.logError('RUNPOD_HEALTH_TEST_ERROR', error);
     
     return NextResponse.json({
@@ -166,7 +166,7 @@ async function testConnectivity() {
       details: runPodService.getHealthStatus()
     };
     
-  } catch (error) {
+  } catch (error: any) {
     return {
       success: false,
       responseTime: Date.now() - startTime,
@@ -216,7 +216,7 @@ async function testErrorHandling() {
       message: 'Expected error was not thrown'
     });
     
-  } catch (error) {
+  } catch (error: any) {
     tests.push({
       test: 'Invalid request handling',
       success: true,
@@ -236,7 +236,7 @@ async function testErrorHandling() {
       message: 'Expected error was not thrown'
     });
     
-  } catch (error) {
+  } catch (error: any) {
     tests.push({
       test: 'Invalid status request handling',
       success: true,
@@ -271,7 +271,7 @@ async function testRetryLogic() {
       note: 'Actual retry behavior depends on service response'
     };
     
-  } catch (error) {
+  } catch (error: any) {
     return {
       success: true, // Expected to fail, but we're testing the retry mechanism
       responseTime: Date.now() - startTime,

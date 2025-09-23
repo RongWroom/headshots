@@ -293,9 +293,8 @@ export async function POST(req: Request) {
         estimatedTime: costEstimate.estimatedTrainingTimeMinutes
       });
     } catch (costError: any) {
-      logger.logWarning('COST_ESTIMATE_FAILED', {
-        error: extractErrorDetails(costError),
-        message: 'Continuing without cost estimate'
+      logger.logWarning('COST_ESTIMATE_FAILED', 'Continuing without cost estimate', {
+        error: extractErrorDetails(costError)
       });
       // Continue without cost estimate - don't fail the training
     }
