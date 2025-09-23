@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trainRequestSchema } from '@/types/training';
 import { Logger, extractErrorDetails } from '@/lib/logger';
+import { ParameterOptimizationService } from '@/lib/parameter-optimization';
+import { runPodService, RunPodTrainingRequest } from '@/lib/runpod-service';
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +130,50 @@ export async function POST(req: Request) {
       packSlug
     });
 
+    // Optimize training parameters using the parameter optimization service
+    logger.logInfo('PARAMETER_OPTIMIZATION_START');
+    const parameterOptimizer = new ParameterOptimizationService();
+    
+    const optimizationResult = await parameterOptimizer.optimizeParameters({
+      imageUrls,
+      packSlug,
+      userPreference: trainingConfig?.user_preference,
+      userId,
+      qualityPreset: trainingConfig?.quality_preset,
+      enableABTesting: true // Enable A/B testing for parameter optimization
+    });
+
+    logger.logSuccess('PARAMETER_OPTIMIZATION_COMPLETE', {
+      selectedPreset: optimizationResult.parameterSet.name,
+      qualityLevel: optimizationResult.parameterSet.qualityLevel,
+      estimatedTime: optimizationResult.costEstimate.estimatedMinutes,
+      estimatedCost: optimizationResult.costEstimate.estimatedCost,
+      abTestParticipant: !!optimizationResult.abTestInfo,
+      validationErrors: optimizationResult.validation.errors.length,
+      validationWarnings: optimizationResult.validation.warnings.length
+    });
+
+    // Check for validation errors
+    if (!optimizationResult.validation.isValid) {
+      const errorResponse = logger.createErrorResponse(
+        'Parameter validation failed',
+        'The optimized training parameters failed validation',
+        'PARAMETER_VALIDATION_ERROR',
+        { 
+          validationErrors: optimizationResult.validation.errors,
+          validationWarnings: optimizationResult.validation.warnings
+        },
+        optimizationResult.validation.errors
+      );
+      
+      logger.logError('PARAMETER_VALIDATION_FAILED', optimizationResult.validation.errors);
+      
+      return NextResponse.json(errorResponse, { 
+        status: 400,
+        headers: authResponse.headers
+      });
+    }
+
     // Validate minimum requirements for high-end training
     if (imageUrls.length < 8) {
       const errorResponse = logger.createErrorResponse(
@@ -178,8 +224,8 @@ export async function POST(req: Request) {
       styleConfig 
     });
 
-    // Prepare RunPod training request
-    const triggerWord = `sks${modelName.substring(0, 6)}`;
+    // Prepare RunPod training request with optimized parameters
+    const triggerWord = trainingConfig?.trigger_word || `sks${modelName.substring(0, 6)}`;
     const runpodPayload = {
       input: {
         image_urls: imageUrls,
@@ -187,16 +233,25 @@ export async function POST(req: Request) {
         model_name: modelName,
         style_prompt: styleConfig.style_prompt,
         training_config: {
-          resolution: 1024,
-          max_train_steps: 1500,  // High-end training with more steps
-          lora_rank: 64,          // Higher rank for better detail preservation
-          learning_rate: 1e-4,
-          train_batch_size: 1,
-          gradient_accumulation_steps: 4,
-          mixed_precision: "bf16",
-          use_8bit_adam: true,
-          enable_xformers: true,
-          ...trainingConfig
+          // Use optimized parameters from the parameter optimization service
+          resolution: optimizationResult.selectedParameters.resolution,
+          max_train_steps: optimizationResult.selectedParameters.max_train_steps,
+          lora_rank: optimizationResult.selectedParameters.lora_rank,
+          lora_alpha: optimizationResult.selectedParameters.lora_alpha,
+          learning_rate: optimizationResult.selectedParameters.learning_rate,
+          train_batch_size: optimizationResult.selectedParameters.train_batch_size,
+          gradient_accumulation_steps: optimizationResult.selectedParameters.gradient_accumulation_steps,
+          mixed_precision: optimizationResult.selectedParameters.mixed_precision,
+          use_8bit_adam: optimizationResult.selectedParameters.use_8bit_adam,
+          enable_xformers: optimizationResult.selectedParameters.enable_xformers,
+          save_steps: optimizationResult.selectedParameters.save_steps,
+          warmup_steps: optimizationResult.selectedParameters.warmup_steps,
+          scheduler_type: optimizationResult.selectedParameters.scheduler_type,
+          weight_decay: optimizationResult.selectedParameters.weight_decay,
+          max_grad_norm: optimizationResult.selectedParameters.max_grad_norm,
+          // Include A/B testing metadata if applicable
+          ab_test_id: optimizationResult.abTestInfo?.testId,
+          variant_id: optimizationResult.abTestInfo?.variantId
         }
       }
     };
@@ -206,75 +261,96 @@ export async function POST(req: Request) {
       triggerWord,
       imageCount: imageUrls.length,
       trainingSteps: runpodPayload.input.training_config.max_train_steps,
-      loraRank: runpodPayload.input.training_config.lora_rank
+      loraRank: runpodPayload.input.training_config.lora_rank,
+      learningRate: runpodPayload.input.training_config.learning_rate,
+      resolution: runpodPayload.input.training_config.resolution,
+      parameterSet: optimizationResult.parameterSet.name,
+      qualityLevel: optimizationResult.parameterSet.qualityLevel,
+      abTestInfo: optimizationResult.abTestInfo
     });
 
-    // Send request to RunPod
+    // Send request to RunPod using the enhanced service with retry logic and error handling
     logger.logInfo('RUNPOD_REQUEST_START');
     
-    const runpodResponse = await fetch(process.env.RUNPOD_TRAINING_ENDPOINT!, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RUNPOD_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(runpodPayload)
-    });
-
-    const runpodResult = await runpodResponse.json();
-    
-    logger.logInfo('RUNPOD_RESPONSE_RECEIVED', {
-      status: runpodResponse.status,
-      statusText: runpodResponse.statusText,
-      hasResult: !!runpodResult
-    });
-
-    if (!runpodResponse.ok) {
+    let runpodResult;
+    try {
+      runpodResult = await runPodService.startTraining(runpodPayload as RunPodTrainingRequest);
+      
+      logger.logSuccess('RUNPOD_REQUEST_SUCCESS', {
+        trainingId: runpodResult.id,
+        status: runpodResult.status
+      });
+      
+    } catch (runpodError: any) {
+      // The RunPod service already handles retries and provides user-friendly error messages
       const errorResponse = logger.createErrorResponse(
         'RunPod training request failed',
-        'Failed to start high-end training on RunPod',
-        'RUNPOD_REQUEST_FAILED',
+        runpodError.message || 'Failed to start training on RunPod',
+        runpodError.code || 'RUNPOD_REQUEST_FAILED',
         { 
-          runpodError: runpodResult,
-          statusCode: runpodResponse.status,
-          statusText: runpodResponse.statusText
+          runpodError: extractErrorDetails(runpodError),
+          retryable: runpodError.retryable,
+          details: runpodError.details
         },
-        [
+        runpodError.actionableSteps || [
           'Check RunPod service status',
           'Verify API credentials are correct',
-          'Ensure training endpoint is deployed',
           'Try again in a few moments'
         ]
       );
       
-      logger.logError('RUNPOD_REQUEST_FAILED', `HTTP ${runpodResponse.status}`, {
-        runpodError: runpodResult
-      });
+      logger.logError('RUNPOD_REQUEST_FAILED', runpodError);
+      
+      // Use appropriate HTTP status code based on error type
+      let statusCode = 500;
+      if (runpodError.code === 'AUTH_ERROR') statusCode = 401;
+      else if (runpodError.code === 'QUOTA_EXCEEDED') statusCode = 429;
+      else if (runpodError.code === 'INVALID_IMAGES' || runpodError.code === 'INSUFFICIENT_IMAGES') statusCode = 400;
+      else if (runpodError.code === 'SERVICE_UNAVAILABLE') statusCode = 503;
       
       return NextResponse.json(errorResponse, { 
-        status: runpodResponse.status,
+        status: statusCode,
         headers: authResponse.headers
       });
     }
 
-    // Success response
+    // Success response with optimization details
     const successResponse = {
       success: true,
       trainingId: runpodResult.id,
-      status: 'training_started',
-      message: 'High-end FLUX Dev LoRA training started successfully',
+      status: runpodResult.status || 'training_started',
+      message: 'Optimized FLUX Dev LoRA training started successfully',
       details: {
         modelName,
         triggerWord,
         styleDescription: styleConfig.description,
         imageCount: imageUrls.length,
-        estimatedTime: '20-30 minutes',
+        estimatedTime: `${optimizationResult.costEstimate.estimatedMinutes} minutes`,
+        estimatedCost: optimizationResult.costEstimate.estimatedCost,
         trainingSteps: runpodPayload.input.training_config.max_train_steps,
         loraRank: runpodPayload.input.training_config.lora_rank,
+        learningRate: runpodPayload.input.training_config.learning_rate,
+        resolution: runpodPayload.input.training_config.resolution,
+        parameterSet: {
+          name: optimizationResult.parameterSet.name,
+          qualityLevel: optimizationResult.parameterSet.qualityLevel,
+          description: optimizationResult.parameterSet.description
+        },
+        qualityAssessment: {
+          overallQuality: optimizationResult.qualityAssessment.overallQuality,
+          recommendedPreset: optimizationResult.qualityAssessment.recommendedPreset,
+          faceDetectionScore: optimizationResult.qualityAssessment.faceDetectionScore
+        },
+        optimization: {
+          validationWarnings: optimizationResult.validation.warnings,
+          recommendations: optimizationResult.recommendations,
+          abTestParticipant: !!optimizationResult.abTestInfo
+        },
         capabilities: {
-          maxResolution: '4096x4096',
-          facePreservation: 'high',
-          detailLevel: 'professional'
+          maxResolution: optimizationResult.selectedParameters.resolution >= 1024 ? '4096x4096' : '2048x2048',
+          facePreservation: optimizationResult.parameterSet.qualityLevel === 'premium' ? 'excellent' : 
+                           optimizationResult.parameterSet.qualityLevel === 'high' ? 'high' : 'good',
+          detailLevel: optimizationResult.parameterSet.qualityLevel
         }
       },
       runpodResponse: runpodResult

@@ -86,20 +86,50 @@ def handler(event):
         model_name = input_data["model_name"]
         style_prompt = input_data.get("style_prompt", "professional headshot")
         
-        # Training configuration for high-end results
-        training_config = {
-            "resolution": 1024,  # Base resolution (will upscale to 4K during generation)
-            "train_batch_size": 1,
-            "learning_rate": 1e-4,
-            "max_train_steps": 1500,  # More steps for better likeness
-            "save_steps": 500,
-            "mixed_precision": "bf16",
-            "gradient_accumulation_steps": 4,
-            "lora_rank": 64,  # Higher rank for better detail preservation
-            "lora_alpha": 64,
-            "use_8bit_adam": True,
-            "enable_xformers": True,
+        # Get optimized training configuration from input or use defaults
+        training_config = input_data.get("training_config", {})
+        
+        # Apply optimized defaults based on research
+        optimized_config = {
+            "resolution": training_config.get("resolution", 1024),
+            "train_batch_size": training_config.get("train_batch_size", 1),
+            "learning_rate": training_config.get("learning_rate", 1e-4),
+            "max_train_steps": training_config.get("max_train_steps", 1500),
+            "save_steps": training_config.get("save_steps", 500),
+            "mixed_precision": training_config.get("mixed_precision", "bf16"),
+            "gradient_accumulation_steps": training_config.get("gradient_accumulation_steps", 4),
+            "lora_rank": training_config.get("lora_rank", 64),
+            "lora_alpha": training_config.get("lora_alpha", 64),
+            "use_8bit_adam": training_config.get("use_8bit_adam", True),
+            "enable_xformers": training_config.get("enable_xformers", True),
+            "warmup_steps": training_config.get("warmup_steps", 150),
+            "scheduler_type": training_config.get("scheduler_type", "cosine"),
+            "weight_decay": training_config.get("weight_decay", 0.01),
+            "max_grad_norm": training_config.get("max_grad_norm", 1.0),
         }
+        
+        # Validate and optimize parameters based on image count
+        image_count = len(image_urls)
+        if image_count >= 10:
+            # High-quality training for many images
+            optimized_config["max_train_steps"] = max(optimized_config["max_train_steps"], 1800)
+            optimized_config["lora_rank"] = max(optimized_config["lora_rank"], 64)
+            optimized_config["learning_rate"] = min(optimized_config["learning_rate"], 8e-5)
+        elif image_count >= 8:
+            # Standard high-quality training
+            optimized_config["max_train_steps"] = max(optimized_config["max_train_steps"], 1500)
+            optimized_config["lora_rank"] = max(optimized_config["lora_rank"], 64)
+        elif image_count >= 5:
+            # Balanced training for fewer images
+            optimized_config["max_train_steps"] = min(optimized_config["max_train_steps"], 1200)
+            optimized_config["lora_rank"] = min(optimized_config["lora_rank"], 32)
+        else:
+            # Conservative training for very few images
+            optimized_config["max_train_steps"] = min(optimized_config["max_train_steps"], 800)
+            optimized_config["lora_rank"] = min(optimized_config["lora_rank"], 16)
+            optimized_config["learning_rate"] = min(optimized_config["learning_rate"], 1.5e-4)
+        
+        training_config = optimized_config
         
         print(f"📋 Training Configuration:")
         print(f"  Model: {model_name}")
