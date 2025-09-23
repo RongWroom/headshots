@@ -161,6 +161,10 @@ export async function POST(req: Request) {
       "corporate-headshots": {
         style_prompt: "professional corporate headshot, clean background, business attire, professional lighting",
         lora_type: "style" as const
+      },
+      "creative-headshots": {
+        style_prompt: "creative professional headshot, artistic lighting, modern style",
+        lora_type: "style" as const
       }
     }[packSlug || "corporate-headshots"];
 
