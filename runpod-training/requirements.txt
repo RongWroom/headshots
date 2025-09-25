@@ -1,16 +1,40 @@
-diffusers==0.30.0
-transformers==4.44.0
-accelerate==0.34.0
-peft==0.12.0
-datasets==2.21.0
-pillow==10.4.0
-requests==2.32.0
+# Core ML libraries with optimized versions
+diffusers==0.30.3
+transformers==4.45.2
+accelerate==0.34.2
+peft==0.13.0
 torch==2.1.0
 torchvision==0.16.0
 xformers==0.0.22.post7
-opencv-python==4.10.0.84
-numpy==1.26.0
-safetensors==0.4.4
+
+# Memory optimization libraries
+bitsandbytes==0.41.3
+optimum==1.21.4
+
+# Image processing and validation
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+scikit-image==0.24.0
+
+# Storage and serialization
+safetensors==0.4.5
+datasets==2.21.0
+
+# API and utilities
+requests==2.32.3
 runpod==1.6.2
-huggingface-hub==0.24.0
+huggingface-hub==0.25.1
 compel==2.0.3
+
+# Performance monitoring
+psutil==6.0.0
+GPUtil==1.4.0
+
+# Checkpoint and resume functionality
+tensorboard==2.17.0
+wandb==0.18.1
+
+# Fast image preprocessing
+albumentations==1.4.15
+kornia==0.7.3
