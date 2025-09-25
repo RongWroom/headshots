@@ -301,14 +301,16 @@ export class RunPodTrainingService {
 
   /**
    * Start training with comprehensive error handling and retry logic
+   * Integrates with training monitoring system
    */
-  async startTraining(request: RunPodTrainingRequest): Promise<RunPodTrainingResponse> {
+  async startTraining(request: RunPodTrainingRequest, trainingSessionId?: string): Promise<RunPodTrainingResponse> {
     this.initialize();
     
     this.logger.logInfo('RUNPOD_TRAINING_START', {
       modelName: request.input.model_name,
       imageCount: request.input.image_urls.length,
-      trainingSteps: request.input.training_config.max_train_steps
+      trainingSteps: request.input.training_config.max_train_steps,
+      trainingSessionId
     });
 
     const retryOptions: RetryOptions = {
@@ -321,7 +323,8 @@ export class RunPodTrainingService {
         this.logger.logInfo('RUNPOD_ERROR_CLASSIFIED', {
           errorCode: classifiedError.code,
           retryable: classifiedError.retryable,
-          userMessage: classifiedError.userMessage
+          userMessage: classifiedError.userMessage,
+          trainingSessionId
         });
         return classifiedError.retryable;
       },
@@ -331,7 +334,8 @@ export class RunPodTrainingService {
           attempt,
           errorCode: classifiedError.code,
           errorMessage: classifiedError.message,
-          nextRetryIn: `${Math.min(2000 * Math.pow(2, attempt), 30000)}ms`
+          nextRetryIn: `${Math.min(2000 * Math.pow(2, attempt), 30000)}ms`,
+          trainingSessionId
         });
       }
     };
@@ -349,7 +353,8 @@ export class RunPodTrainingService {
             errorCode: classifiedError.code,
             attempts: retryResult.attempts,
             totalTime: retryResult.totalTime,
-            finalError: classifiedError.message
+            finalError: classifiedError.message,
+            trainingSessionId
           });
 
           // Throw a user-friendly error
@@ -364,7 +369,8 @@ export class RunPodTrainingService {
         this.logger.logSuccess('RUNPOD_TRAINING_STARTED', {
           trainingId: retryResult.data?.id,
           attempts: retryResult.attempts,
-          totalTime: retryResult.totalTime
+          totalTime: retryResult.totalTime,
+          trainingSessionId
         });
 
         return retryResult.data!;
@@ -376,7 +382,8 @@ export class RunPodTrainingService {
       // Handle circuit breaker errors
       if (error.message?.includes('Circuit breaker is OPEN')) {
         this.logger.logError('RUNPOD_CIRCUIT_BREAKER_OPEN', {
-          circuitState: this.circuitBreaker.getState()
+          circuitState: this.circuitBreaker.getState(),
+          trainingSessionId
         });
 
         const circuitError = new Error('RunPod training service is temporarily unavailable due to repeated failures');

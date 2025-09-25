@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Logger } from '@/lib/logger';
+import { trainingMonitoringService } from '@/lib/training-monitoring';
 
 export const dynamic = "force-dynamic";
 
 /**
- * Get training status for user's models
+ * Get comprehensive training status for user's models
  */
 export async function GET(request: Request) {
   const logger = new Logger('TRAINING_STATUS');
@@ -14,6 +15,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const modelId = url.searchParams.get('model_id');
+    const sessionId = url.searchParams.get('session_id');
     
     // Create Supabase client
     const supabase = createServerClient(
@@ -43,24 +45,60 @@ export async function GET(request: Request) {
 
     logger.setUserId(user.id);
 
-    if (modelId) {
-      // Get specific model status
+    if (sessionId) {
+      // Get specific training session status
+      const session = await trainingMonitoringService.getTrainingSession(sessionId);
+      
+      if (!session || session.user_id !== user.id) {
+        logger.logError('TRAINING_SESSION_NOT_FOUND', null, { sessionId });
+        return NextResponse.json(
+          { error: 'Training session not found' },
+          { status: 404 }
+        );
+      }
+
+      // Calculate progress information
+      const progressInfo = await trainingMonitoringService.calculateTrainingProgress(sessionId);
+      const estimatedCompletion = await trainingMonitoringService.estimateCompletionTime(sessionId);
+
+      logger.logSuccess('TRAINING_SESSION_STATUS_RETRIEVED', { 
+        sessionId, 
+        status: session.status,
+        progress: progressInfo.progressPercentage
+      });
+
+      return NextResponse.json({
+        session: {
+          ...session,
+          progressInfo,
+          estimatedCompletionTime: estimatedCompletion?.toISOString()
+        }
+      });
+
+    } else if (modelId) {
+      // Get training sessions for specific model
+      const sessions = await trainingMonitoringService.getTrainingSessionsByModel(parseInt(modelId));
+      
+      // Filter sessions for current user
+      const userSessions = sessions.filter(session => session.user_id === user.id);
+      
+      if (userSessions.length === 0) {
+        logger.logError('MODEL_SESSIONS_NOT_FOUND', null, { modelId });
+        return NextResponse.json(
+          { error: 'No training sessions found for model' },
+          { status: 404 }
+        );
+      }
+
+      // Get the most recent session
+      const latestSession = userSessions[0];
+      const progressInfo = await trainingMonitoringService.calculateTrainingProgress(latestSession.id);
+      const estimatedCompletion = await trainingMonitoringService.estimateCompletionTime(latestSession.id);
+
+      // Also get the legacy model info for backward compatibility
       const { data: model, error: modelError } = await supabase
         .from('models')
-        .select(`
-          id,
-          name,
-          status,
-          progress,
-          error,
-          created_at,
-          updated_at,
-          training_started_at,
-          training_completed_at,
-          training_duration,
-          replicate_model_id,
-          webhook_events
-        `)
+        .select('id, name, status, created_at, updated_at')
         .eq('id', modelId)
         .eq('user_id', user.id)
         .single();
@@ -73,69 +111,75 @@ export async function GET(request: Request) {
         );
       }
 
-      // Calculate additional status info
-      const statusInfo = calculateTrainingStatusInfo(model);
-
-      logger.logSuccess('MODEL_STATUS_RETRIEVED', { modelId, status: model.status });
+      logger.logSuccess('MODEL_TRAINING_STATUS_RETRIEVED', { 
+        modelId, 
+        sessionId: latestSession.id,
+        status: latestSession.status 
+      });
 
       return NextResponse.json({
-        model: {
-          ...model,
-          ...statusInfo
-        }
+        model,
+        session: {
+          ...latestSession,
+          progressInfo,
+          estimatedCompletionTime: estimatedCompletion?.toISOString()
+        },
+        allSessions: userSessions
       });
+
     } else {
-      // Get all models for user
-      const { data: models, error: modelsError } = await supabase
-        .from('models')
-        .select(`
-          id,
-          name,
-          status,
-          progress,
-          error,
-          created_at,
-          updated_at,
-          training_started_at,
-          training_completed_at,
-          training_duration,
-          replicate_model_id
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Get all training sessions for user
+      const sessions = await trainingMonitoringService.getTrainingSessionsByUser(user.id, {
+        limit: 50,
+        orderBy: 'created_at',
+        orderDirection: 'desc'
+      });
 
-      if (modelsError) {
-        logger.logError('MODELS_FETCH_FAILED', modelsError);
-        return NextResponse.json(
-          { error: 'Failed to fetch models' },
-          { status: 500 }
-        );
-      }
-
-      // Calculate status info for all models
-      const modelsWithStatus = models.map(model => ({
-        ...model,
-        ...calculateTrainingStatusInfo(model)
-      }));
+      // Get training history summary
+      const history = await trainingMonitoringService.getTrainingHistory(user.id, {
+        limit: 30 // Last 30 days
+      });
 
       // Calculate summary statistics
+      const activeSessions = sessions.filter(s => ['pending', 'queued', 'training'].includes(s.status));
+      const completedSessions = sessions.filter(s => s.status === 'completed');
+      const failedSessions = sessions.filter(s => s.status === 'failed');
+
       const summary = {
-        total: models.length,
-        pending: models.filter(m => m.status === 'pending').length,
-        training: models.filter(m => m.status === 'training').length,
-        finished: models.filter(m => m.status === 'finished').length,
-        failed: models.filter(m => m.status === 'failed').length,
-        averageTrainingTime: calculateAverageTrainingTime(models)
+        total: sessions.length,
+        active: activeSessions.length,
+        completed: completedSessions.length,
+        failed: failedSessions.length,
+        successRate: sessions.length > 0 ? (completedSessions.length / sessions.length) * 100 : 0,
+        averageTrainingTime: calculateAverageTrainingTime(completedSessions)
       };
 
-      logger.logSuccess('MODELS_STATUS_RETRIEVED', { 
+      // Get progress info for active sessions
+      const sessionsWithProgress = await Promise.all(
+        sessions.slice(0, 10).map(async (session) => {
+          if (['pending', 'queued', 'training'].includes(session.status)) {
+            const progressInfo = await trainingMonitoringService.calculateTrainingProgress(session.id);
+            const estimatedCompletion = await trainingMonitoringService.estimateCompletionTime(session.id);
+            return {
+              ...session,
+              progressInfo,
+              estimatedCompletionTime: estimatedCompletion?.toISOString()
+            };
+          }
+          return session;
+        })
+      );
+
+      logger.logSuccess('USER_TRAINING_STATUS_RETRIEVED', { 
         userId: user.id, 
-        totalModels: models.length,
+        totalSessions: sessions.length,
+        activeSessions: activeSessions.length,
         summary 
       });
 
       return NextResponse.json({
-        models: modelsWithStatus,
+        sessions: sessionsWithProgress,
+        history,
         summary
       });
     }
@@ -228,17 +272,17 @@ function calculateTrainingStatusInfo(model: any) {
 }
 
 /**
- * Calculate average training time for completed models
+ * Calculate average training time for completed sessions
  */
-function calculateAverageTrainingTime(models: any[]): number | null {
-  const completedModels = models.filter(m => 
-    m.status === 'finished' && m.training_duration
+function calculateAverageTrainingTime(sessions: any[]): number | null {
+  const completedSessions = sessions.filter(s => 
+    s.status === 'completed' && s.training_duration
   );
 
-  if (completedModels.length === 0) return null;
+  if (completedSessions.length === 0) return null;
 
-  const totalTime = completedModels.reduce((sum, model) => sum + model.training_duration, 0);
-  return totalTime / completedModels.length;
+  const totalTime = completedSessions.reduce((sum, session) => sum + session.training_duration, 0);
+  return totalTime / completedSessions.length;
 }
 
 /**

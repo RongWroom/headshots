@@ -1,315 +1,543 @@
-"use client";
+/**
+ * Enhanced Training Status Dashboard Component
+ * Displays comprehensive training status, progress, and monitoring information
+ */
 
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/components/ui/use-toast';
-import { RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Play, 
+  Pause,
+  RotateCcw,
+  TrendingUp,
+  Activity,
+  Zap,
+  AlertTriangle,
+  RefreshCw
+} from 'lucide-react';
 
-interface TrainingModel {
+interface TrainingProgressInfo {
+  progressPercentage: number;
+  elapsedTime: number;
+  estimatedTimeRemaining: number;
+  statusMessage: string;
+  isStalled: boolean;
+  currentStep: number;
+  totalSteps: number;
+  stepsPerSecond: number;
+  averageStepTime: number;
+}
+
+interface TrainingSession {
   id: string;
-  name: string;
-  status: 'pending' | 'training' | 'finished' | 'failed';
-  progress?: number;
-  error?: string;
-  created_at: string;
-  updated_at: string;
+  model_id: number;
+  provider: string;
+  status: 'pending' | 'queued' | 'training' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  current_step: number;
+  total_steps?: number;
   training_started_at?: string;
   training_completed_at?: string;
   training_duration?: number;
-  elapsedTime?: number;
-  estimatedTimeRemaining?: number;
-  statusMessage: string;
-  isActive: boolean;
-  isComplete: boolean;
-  canRetry: boolean;
-  formattedElapsedTime?: string;
-  formattedEstimatedRemaining?: string;
+  error_message?: string;
+  error_code?: string;
+  retry_count: number;
+  created_at: string;
+  updated_at: string;
+  progressInfo?: TrainingProgressInfo;
+  estimatedCompletionTime?: string;
 }
 
 interface TrainingSummary {
   total: number;
-  pending: number;
-  training: number;
-  finished: number;
+  active: number;
+  completed: number;
   failed: number;
-  averageTrainingTime?: number;
+  successRate: number;
+  averageTrainingTime: number | null;
 }
 
-interface TrainingStatusResponse {
-  models: TrainingModel[];
-  summary: TrainingSummary;
+interface TrainingHistorySummary {
+  date: string;
+  total_sessions: number;
+  successful_sessions: number;
+  failed_sessions: number;
+  success_rate: number;
+  average_duration: number;
 }
 
-export default function TrainingStatusDashboard() {
-  const [data, setData] = useState<TrainingStatusResponse | null>(null);
+interface TrainingDashboardProps {
+  userId?: string;
+  modelId?: number;
+  refreshInterval?: number;
+}
+
+export default function TrainingStatusDashboard({ 
+  userId, 
+  modelId, 
+  refreshInterval = 15000 // Reduced to 15 seconds for better real-time updates
+}: TrainingDashboardProps) {
+  const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [summary, setSummary] = useState<TrainingSummary | null>(null);
+  const [history, setHistory] = useState<TrainingHistorySummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState('active');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchTrainingStatus = async (showRefreshToast = false) => {
+  // Fetch training status data
+  const fetchTrainingStatus = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    
     try {
-      setRefreshing(true);
-      const response = await fetch('/api/training/status');
+      const params = new URLSearchParams();
+      if (modelId) params.append('model_id', modelId.toString());
       
+      const response = await fetch(`/api/training/status?${params}`);
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to fetch training status');
+        throw new Error(data.error || 'Failed to fetch training status');
       }
-      
-      const result = await response.json();
-      setData(result);
-      
-      if (showRefreshToast) {
-        toast({
-          title: "Status Updated",
-          description: "Training status has been refreshed.",
-        });
+
+      if (modelId) {
+        // Single model view
+        setSessions(data.allSessions || [data.session].filter(Boolean));
+      } else {
+        // All sessions view
+        setSessions(data.sessions || []);
+        setSummary(data.summary);
+        setHistory(data.history || []);
       }
-    } catch (error) {
-      console.error('Error fetching training status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch training status. Please try again.",
-        variant: "destructive",
-      });
+
+      setError(null);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Failed to fetch training status:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
+  // Set up polling for real-time updates
   useEffect(() => {
-    fetchTrainingStatus();
+    fetchTrainingStatus(true);
     
-    // Auto-refresh every 30 seconds for active trainings
-    const interval = setInterval(() => {
-      if (data?.models.some(model => model.isActive)) {
-        fetchTrainingStatus();
-      }
-    }, 30000);
-
+    const interval = setInterval(() => fetchTrainingStatus(false), refreshInterval);
     return () => clearInterval(interval);
-  }, [data?.models]);
+  }, [modelId, refreshInterval]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4" />;
-      case 'training':
-        return <RefreshCw className="h-4 w-4 animate-spin" />;
-      case 'finished':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'training':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'finished':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Filter sessions by status
+  const activeSessions = sessions.filter(s => ['pending', 'queued', 'training'].includes(s.status));
+  const completedSessions = sessions.filter(s => s.status === 'completed');
+  const failedSessions = sessions.filter(s => s.status === 'failed');
+  const stalledSessions = activeSessions.filter(s => s.progressInfo?.isStalled);
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Training Status</h2>
-          <div className="animate-pulse h-10 w-24 bg-gray-200 rounded"></div>
-        </div>
+      <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-24 bg-gray-200 rounded-lg"></div>
-            </div>
-          ))}
-        </div>
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="animate-pulse h-32 bg-gray-200 rounded-lg"></div>
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
     );
   }
 
-  if (!data) {
+  if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">No training data available.</p>
-        <Button onClick={() => fetchTrainingStatus()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Failed to load training status: {error}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-2"
+            onClick={() => fetchTrainingStatus(true)}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Training Status</h2>
+      {/* Header with last updated info */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Training Dashboard</h2>
+          {lastUpdated && (
+            <p className="text-sm text-muted-foreground">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
         <Button 
-          onClick={() => fetchTrainingStatus(true)} 
-          disabled={refreshing}
-          variant="outline"
+          variant="outline" 
           size="sm"
+          onClick={() => fetchTrainingStatus(true)}
+          disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Models</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.summary.total}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-600">Training</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{data.summary.training}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-600">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{data.summary.finished}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-600">Failed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{data.summary.failed}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Alerts for stalled sessions */}
+      {stalledSessions.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {stalledSessions.length} training session{stalledSessions.length > 1 ? 's' : ''} appear to be stalled. 
+            No progress updates received recently.
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {/* Models List */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Your Models</h3>
-        
-        {data.models.length === 0 ? (
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-gray-500">No models found. Start by training your first model!</p>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.total}</div>
+              <p className="text-xs text-muted-foreground">
+                All time training sessions
+              </p>
             </CardContent>
           </Card>
-        ) : (
-          data.models.map((model) => (
-            <Card key={model.id} className="relative">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${getStatusColor(model.status)}`}>
-                      {getStatusIcon(model.status)}
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{model.name}</CardTitle>
-                      <CardDescription>{model.statusMessage}</CardDescription>
-                    </div>
-                  </div>
-                  <Badge className={getStatusColor(model.status)}>
-                    {model.status.charAt(0).toUpperCase() + model.status.slice(1)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Progress Bar for Training */}
-                {model.status === 'training' && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{model.progress || 0}%</span>
-                    </div>
-                    <Progress value={model.progress || 0} className="h-2" />
-                  </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active</CardTitle>
+              <Play className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{summary.active}</div>
+              <p className="text-xs text-muted-foreground">
+                Currently training or queued
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {summary.successRate.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Completed successfully
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg. Time</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {summary.averageTrainingTime 
+                  ? formatDuration(summary.averageTrainingTime)
+                  : 'N/A'
+                }
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Average completion time
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Training Sessions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Training Sessions</CardTitle>
+          <CardDescription>
+            Monitor your training progress and status in real-time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="active">
+                Active ({activeSessions.length})
+                {stalledSessions.length > 0 && (
+                  <AlertTriangle className="h-3 w-3 ml-1 text-red-500" />
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="completed">
+                Completed ({completedSessions.length})
+              </TabsTrigger>
+              <TabsTrigger value="failed">
+                Failed ({failedSessions.length})
+              </TabsTrigger>
+            </TabsList>
 
-                {/* Time Information */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">Created:</span>
-                    <p>{new Date(model.created_at).toLocaleString()}</p>
-                  </div>
-                  
-                  {model.formattedElapsedTime && (
-                    <div>
-                      <span className="font-medium text-gray-600">
-                        {model.isActive ? 'Running for:' : 'Duration:'}
-                      </span>
-                      <p>{model.formattedElapsedTime}</p>
-                    </div>
-                  )}
-                  
-                  {model.formattedEstimatedRemaining && model.isActive && (
-                    <div>
-                      <span className="font-medium text-gray-600">Est. remaining:</span>
-                      <p>{model.formattedEstimatedRemaining}</p>
-                    </div>
-                  )}
+            <TabsContent value="active" className="space-y-4">
+              {activeSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No active training sessions</p>
+                  <p className="text-sm">Start a new training to see progress here</p>
                 </div>
+              ) : (
+                activeSessions.map(session => (
+                  <TrainingSessionCard key={session.id} session={session} />
+                ))
+              )}
+            </TabsContent>
 
-                {/* Error Message */}
-                {model.status === 'failed' && model.error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-800">
-                      <strong>Error:</strong> {model.error}
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex space-x-2">
-                  {model.status === 'finished' && (
-                    <Button size="sm">
-                      Generate Images
-                    </Button>
-                  )}
-                  
-                  {model.canRetry && (
-                    <Button size="sm" variant="outline">
-                      Retry Training
-                    </Button>
-                  )}
-                  
-                  <Button size="sm" variant="ghost">
-                    View Details
-                  </Button>
+            <TabsContent value="completed" className="space-y-4">
+              {completedSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No completed training sessions</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+              ) : (
+                completedSessions.map(session => (
+                  <TrainingSessionCard key={session.id} session={session} />
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="failed" className="space-y-4">
+              {failedSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50 text-green-500" />
+                  <p>No failed training sessions</p>
+                  <p className="text-sm">Great job! All your training sessions completed successfully</p>
+                </div>
+              ) : (
+                failedSessions.map(session => (
+                  <TrainingSessionCard key={session.id} session={session} />
+                ))
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Training History Chart */}
+      {history.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Training History</CardTitle>
+            <CardDescription>
+              Daily training activity over the past month
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {history.slice(0, 7).map((day, index) => (
+                <div key={day.date} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium w-20">
+                      {new Date(day.date).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span>{day.total_sessions} sessions</span>
+                        <Badge variant="outline" className="text-xs">
+                          {day.success_rate.toFixed(0)}% success
+                        </Badge>
+                      </div>
+                      <Progress 
+                        value={day.success_rate} 
+                        className="h-2 mt-1" 
+                      />
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatDuration(day.average_duration)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
+}
+
+// Enhanced individual training session card component
+function TrainingSessionCard({ session }: { session: TrainingSession }) {
+  const getStatusBadge = (status: string, isStalled?: boolean) => {
+    const variants = {
+      pending: { variant: 'secondary' as const, icon: Clock, color: 'text-gray-600' },
+      queued: { variant: 'secondary' as const, icon: Clock, color: 'text-blue-600' },
+      training: { variant: 'default' as const, icon: Zap, color: 'text-blue-600' },
+      completed: { variant: 'default' as const, icon: CheckCircle, color: 'text-green-600' },
+      failed: { variant: 'destructive' as const, icon: XCircle, color: 'text-red-600' },
+      cancelled: { variant: 'secondary' as const, icon: Pause, color: 'text-gray-600' }
+    };
+
+    const config = variants[status as keyof typeof variants] || variants.pending;
+    const Icon = isStalled ? AlertTriangle : config.icon;
+    const color = isStalled ? 'text-red-500' : config.color;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className={`h-3 w-3 ${color}`} />
+        {isStalled ? 'Stalled' : status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const progressInfo = session.progressInfo;
+  const showProgress = ['training', 'queued'].includes(session.status);
+  const isStalled = progressInfo?.isStalled || false;
+
+  return (
+    <Card className={isStalled ? 'border-red-200 bg-red-50/50' : ''}>
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold">Model {session.model_id}</h4>
+              {getStatusBadge(session.status, isStalled)}
+              <Badge variant="outline">{session.provider}</Badge>
+              {session.retry_count > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  Retry #{session.retry_count}
+                </Badge>
+              )}
+            </div>
+
+            {progressInfo && (
+              <p className="text-sm text-muted-foreground">
+                {progressInfo.statusMessage}
+              </p>
+            )}
+
+            {showProgress && progressInfo && (
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{progressInfo.progressPercentage.toFixed(1)}%</span>
+                </div>
+                <Progress 
+                  value={progressInfo.progressPercentage} 
+                  className={`h-2 ${isStalled ? 'bg-red-100' : ''}`}
+                />
+                
+                <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                  {progressInfo.totalSteps > 0 && (
+                    <div>
+                      <span className="font-medium">Steps:</span> {progressInfo.currentStep} / {progressInfo.totalSteps}
+                    </div>
+                  )}
+                  {progressInfo.stepsPerSecond > 0 && (
+                    <div>
+                      <span className="font-medium">Speed:</span> {progressInfo.stepsPerSecond.toFixed(2)}/s
+                    </div>
+                  )}
+                  {progressInfo.elapsedTime > 0 && (
+                    <div>
+                      <span className="font-medium">Elapsed:</span> {formatDuration(progressInfo.elapsedTime)}
+                    </div>
+                  )}
+                  {progressInfo.estimatedTimeRemaining > 0 && (
+                    <div>
+                      <span className="font-medium">Remaining:</span> ~{formatDuration(progressInfo.estimatedTimeRemaining)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {session.status === 'failed' && session.error_message && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <div className="font-medium">Training Failed</div>
+                  <div className="mt-1">{session.error_message}</div>
+                  {session.error_code && (
+                    <div className="text-xs mt-1 opacity-75">Error Code: {session.error_code}</div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>Started: {new Date(session.created_at).toLocaleString()}</span>
+              {session.training_duration && (
+                <span>Duration: {formatDuration(session.training_duration)}</span>
+              )}
+              {session.estimatedCompletionTime && session.status === 'training' && (
+                <span>ETA: {new Date(session.estimatedCompletionTime).toLocaleTimeString()}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            {session.status === 'failed' && (
+              <Button size="sm" variant="outline">
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Retry
+              </Button>
+            )}
+            {['pending', 'queued', 'training'].includes(session.status) && (
+              <Button size="sm" variant="outline">
+                <Pause className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Utility function to format duration
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  } else {
+    return `${seconds}s`;
+  }
 }
