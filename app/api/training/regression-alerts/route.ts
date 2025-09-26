@@ -243,7 +243,8 @@ export async function DELETE(request: NextRequest) {
     let deleteQuery = supabase
       .from('regression_alerts')
       .delete()
-      .lt('detected_at', cutoffDate.toISOString());
+      .lt('detected_at', cutoffDate.toISOString())
+      .select();
 
     if (onlyResolved) {
       deleteQuery = deleteQuery.not('resolved_at', 'is', null);
@@ -259,10 +260,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const deletedCount = data?.length || 0;
+
     return NextResponse.json({
       success: true,
-      data: { deletedCount: data?.length || 0 },
-      message: `Deleted ${data?.length || 0} regression alerts older than ${olderThanDays} days`
+      data: { deletedCount },
+      message: `Deleted ${deletedCount} regression alerts older than ${olderThanDays} days`
     });
 
   } catch (error) {
