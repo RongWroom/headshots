@@ -243,12 +243,13 @@ export async function DELETE(request: NextRequest) {
     let deleteQuery = supabase
       .from('regression_alerts')
       .delete()
-      .lt('detected_at', cutoffDate.toISOString())
-      .select();
+      .lt('detected_at', cutoffDate.toISOString());
 
     if (onlyResolved) {
       deleteQuery = deleteQuery.not('resolved_at', 'is', null);
     }
+
+    deleteQuery = deleteQuery.select();
 
     const { data, error } = await deleteQuery;
 
