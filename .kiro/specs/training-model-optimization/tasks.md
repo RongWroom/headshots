@@ -49,7 +49,7 @@
   - Implement face detection and cropping for better training results
   - _Requirements: 3.1, 6.1_
 
-- [ ] 8. Add training job queue and concurrency management
+- [x] 8. Add training job queue and concurrency management
   - Implement job queue system to handle multiple concurrent training requests
   - Add user-based rate limiting and priority queuing
   - Create queue monitoring dashboard showing job status and estimated wait times
