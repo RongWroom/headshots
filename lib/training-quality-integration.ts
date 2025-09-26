@@ -109,7 +109,7 @@ export class TrainingQualityIntegration {
       };
     } catch (error) {
       console.error('Training quality integration failed:', error);
-      actions.push(`Error during quality integration: ${error.message}`);
+      actions.push(`Error during quality integration: ${error instanceof Error ? error.message : String(error)}`);
       
       return {
         qualityResult: null,
@@ -156,7 +156,7 @@ export class TrainingQualityIntegration {
       };
     } catch (error) {
       console.error('Failed to generate quality report:', error);
-      throw new Error(`Failed to generate quality report: ${error.message}`);
+      throw new Error(`Failed to generate quality report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
