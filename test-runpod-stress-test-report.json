@@ -1,0 +1,668 @@
+{
+  "timestamp": "2025-09-26T12:25:15.793Z",
+  "stressConfig": {
+    "baseUrl": "http://localhost:3000",
+    "concurrency": {
+      "maxConcurrentJobs": 10,
+      "batchSizes": [
+        2,
+        5,
+        8,
+        10
+      ],
+      "testDuration": 60000,
+      "requestInterval": 1000
+    },
+    "thresholds": {
+      "maxResponseTime": 15000,
+      "minSuccessRate": 0.8,
+      "maxErrorRate": 0.2,
+      "maxQueueWaitTime": 30000
+    },
+    "loadPatterns": {
+      "burst": {
+        "requests": 10,
+        "interval": 100
+      },
+      "sustained": {
+        "requests": 20,
+        "interval": 2000
+      },
+      "gradual": {
+        "requests": 15,
+        "interval": 4000
+      }
+    }
+  },
+  "metrics": {
+    "requestsSent": 11,
+    "requestsSuccessful": 0,
+    "requestsFailed": 11,
+    "responseTimes": [
+      3,
+      2,
+      1,
+      1,
+      3,
+      2,
+      2,
+      2,
+      3,
+      1,
+      2
+    ],
+    "errorTypes": {
+      "request to http://localhost:3000/api/runpod/train failed, reason: ": 11
+    },
+    "queueWaitTimes": [],
+    "concurrentJobsActive": 0,
+    "maxConcurrentJobsReached": 1,
+    "systemResourceUsage": [],
+    "errors": []
+  },
+  "results": {
+    "burstLoad": {
+      "testName": "Burst Load",
+      "requestCount": 10,
+      "successfulRequests": 0,
+      "successRate": 0,
+      "avgResponseTime": 2,
+      "maxResponseTime": 3,
+      "totalTime": 917,
+      "passed": false,
+      "results": [
+        {
+          "requestIndex": 0,
+          "requestTime": 3,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 1,
+          "requestTime": 2,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 2,
+          "requestTime": 1,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 3,
+          "requestTime": 1,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 4,
+          "requestTime": 3,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 5,
+          "requestTime": 2,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 6,
+          "requestTime": 2,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 7,
+          "requestTime": 2,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 8,
+          "requestTime": 3,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        },
+        {
+          "requestIndex": 9,
+          "requestTime": 1,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        }
+      ]
+    },
+    "sustainedLoad": {
+      "testName": "Sustained Load",
+      "requestCount": 20,
+      "completedRequests": 0,
+      "successfulRequests": 0,
+      "successRate": 0,
+      "maxConcurrent": 0,
+      "avgResponseTime": 0,
+      "maxResponseTime": 0,
+      "totalTime": 0,
+      "passed": false,
+      "results": [
+        {
+          "requestIndex": 0,
+          "requestTime": 2,
+          "success": null,
+          "statusCode": null,
+          "error": "request to http://localhost:3000/api/runpod/train failed, reason: ",
+          "timeout": false
+        }
+      ]
+    },
+    "queueManagement": {
+      "testName": "Queue Management",
+      "operations": [
+        {
+          "operation": "add",
+          "requestCount": 10,
+          "successfulRequests": 0,
+          "successRate": 0,
+          "avgResponseTime": 232,
+          "totalTime": 513,
+          "passed": false,
+          "results": [
+            {
+              "operation": "add",
+              "requestIndex": 0,
+              "requestTime": 1,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 1,
+              "requestTime": 53,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 2,
+              "requestTime": 104,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 3,
+              "requestTime": 155,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 4,
+              "requestTime": 206,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 5,
+              "requestTime": 258,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 6,
+              "requestTime": 310,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 7,
+              "requestTime": 361,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 8,
+              "requestTime": 411,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "add",
+              "requestIndex": 9,
+              "requestTime": 462,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            }
+          ]
+        },
+        {
+          "operation": "status",
+          "requestCount": 20,
+          "successfulRequests": 0,
+          "successRate": 0,
+          "avgResponseTime": 499,
+          "totalTime": 1043,
+          "passed": false,
+          "results": [
+            {
+              "operation": "status",
+              "requestIndex": 0,
+              "requestTime": 1,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 1,
+              "requestTime": 53,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 2,
+              "requestTime": 107,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 3,
+              "requestTime": 161,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 4,
+              "requestTime": 215,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 5,
+              "requestTime": 266,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 6,
+              "requestTime": 318,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 7,
+              "requestTime": 374,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 8,
+              "requestTime": 422,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 9,
+              "requestTime": 473,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 10,
+              "requestTime": 535,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 11,
+              "requestTime": 577,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 12,
+              "requestTime": 629,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 13,
+              "requestTime": 681,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 14,
+              "requestTime": 732,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 15,
+              "requestTime": 784,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 16,
+              "requestTime": 835,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 17,
+              "requestTime": 887,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 18,
+              "requestTime": 940,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "status",
+              "requestIndex": 19,
+              "requestTime": 994,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue failed, reason: ",
+              "timeout": false
+            }
+          ]
+        },
+        {
+          "operation": "priority_update",
+          "requestCount": 5,
+          "successfulRequests": 0,
+          "successRate": 0,
+          "avgResponseTime": 108,
+          "totalTime": 260,
+          "passed": false,
+          "results": [
+            {
+              "operation": "priority_update",
+              "requestIndex": 0,
+              "requestTime": 4,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/stress-queue-0 failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "priority_update",
+              "requestIndex": 1,
+              "requestTime": 56,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/stress-queue-1 failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "priority_update",
+              "requestIndex": 2,
+              "requestTime": 108,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/stress-queue-2 failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "priority_update",
+              "requestIndex": 3,
+              "requestTime": 161,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/stress-queue-3 failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "priority_update",
+              "requestIndex": 4,
+              "requestTime": 212,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/stress-queue-4 failed, reason: ",
+              "timeout": false
+            }
+          ]
+        },
+        {
+          "operation": "metrics",
+          "requestCount": 10,
+          "successfulRequests": 0,
+          "successRate": 0,
+          "avgResponseTime": 235,
+          "totalTime": 516,
+          "passed": false,
+          "results": [
+            {
+              "operation": "metrics",
+              "requestIndex": 0,
+              "requestTime": 2,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 1,
+              "requestTime": 54,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 2,
+              "requestTime": 106,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 3,
+              "requestTime": 158,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 4,
+              "requestTime": 209,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 5,
+              "requestTime": 261,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 6,
+              "requestTime": 312,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 7,
+              "requestTime": 363,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 8,
+              "requestTime": 414,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            },
+            {
+              "operation": "metrics",
+              "requestIndex": 9,
+              "requestTime": 466,
+              "success": null,
+              "statusCode": null,
+              "error": "request to http://localhost:3000/api/training/queue/metrics failed, reason: ",
+              "timeout": false
+            }
+          ]
+        }
+      ],
+      "overallPassed": false
+    },
+    "resourceExhaustion": {
+      "testName": "Resource Exhaustion",
+      "tests": [
+        {
+          "name": "Memory Intensive",
+          "requests": 3,
+          "successful": 0,
+          "successRate": 0,
+          "passed": false
+        },
+        {
+          "name": "High Frequency",
+          "requests": 15,
+          "successful": 0,
+          "successRate": 0,
+          "totalTime": 4,
+          "passed": false
+        },
+        {
+          "name": "Concurrent Status Checks",
+          "requests": 20,
+          "successful": 20,
+          "successRate": 1,
+          "passed": true
+        }
+      ],
+      "overallPassed": false
+    }
+  },
+  "summary": {
+    "totalTests": 4,
+    "passedTests": 0,
+    "stressScore": 0,
+    "grade": "F"
+  }
+}
