@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Quality assessment error:', error);
     return NextResponse.json(
-      { error: 'Failed to assess training quality', details: error.message },
+      { 
+        error: 'Failed to assess training quality', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
@@ -70,7 +73,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Quality history retrieval error:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve quality history', details: error.message },
+      { 
+        error: 'Failed to retrieve quality history', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
