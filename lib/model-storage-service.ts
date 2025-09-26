@@ -351,7 +351,7 @@ export class ModelStorageServiceImpl implements ModelStorageService {
     }
   }
 
-  async cleanupExpiredModels(options: ModelCleanupOptions = {}): Promise<ModelCleanupResult> {
+  async cleanupExpiredModels(options: ModelCleanupOptions = { cleanup_expired: true }): Promise<ModelCleanupResult> {
     const result: ModelCleanupResult = {
       models_cleaned: 0,
       files_deleted: [],
