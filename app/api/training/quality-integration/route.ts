@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Training quality integration error:', error);
     return NextResponse.json(
-      { error: 'Failed to integrate quality assessment', details: error.message },
+      { 
+        error: 'Failed to integrate quality assessment', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
@@ -109,7 +112,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Training quality integration retrieval error:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve quality integration data', details: error.message },
+      { 
+        error: 'Failed to retrieve quality integration data', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }

@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Quality monitoring error:', error);
     return NextResponse.json(
-      { error: 'Failed to monitor model quality', details: error.message },
+      { 
+        error: 'Failed to monitor model quality', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
@@ -66,7 +69,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Quality monitoring retrieval error:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve quality monitoring data', details: error.message },
+      { 
+        error: 'Failed to retrieve quality monitoring data', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
@@ -101,7 +107,10 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Alert resolution error:', error);
     return NextResponse.json(
-      { error: 'Failed to resolve alert', details: error.message },
+      { 
+        error: 'Failed to resolve alert', 
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
