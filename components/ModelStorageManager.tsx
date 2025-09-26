@@ -505,7 +505,7 @@ export default function ModelStorageManager({ modelId, userId, onStorageUpdate }
                     <Switch
                       id="is_public"
                       checked={shareForm.is_public}
-                      onCheckedChange={(checked) => setShareForm({ ...shareForm, is_public: checked })}
+                      onCheckedChange={(checked: boolean) => setShareForm({ ...shareForm, is_public: checked })}
                     />
                     <Label htmlFor="is_public">Make public</Label>
                   </div>
