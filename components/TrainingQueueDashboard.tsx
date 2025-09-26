@@ -419,9 +419,9 @@ export default function TrainingQueueDashboard({
                     <Badge className={getStatusColor(job.status)}>
                       {job.status}
                     </Badge>
-                    {job.training_duration && (
+                    {job.actual_start_time && job.completion_time && (
                       <span className="text-sm text-muted-foreground">
-                        {formatDuration(job.training_duration)}
+                        {formatDuration(new Date(job.completion_time).getTime() - new Date(job.actual_start_time).getTime())}
                       </span>
                     )}
                   </div>
