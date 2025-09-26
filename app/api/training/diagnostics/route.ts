@@ -464,12 +464,12 @@ export async function POST(request: NextRequest) {
 }
 
 async function clearTrainingLogs(trainingId?: string) {
-  if (typeof global !== 'undefined' && global.trainingLogs) {
+  if (typeof global !== 'undefined' && (global as any).trainingLogs) {
     if (trainingId) {
-      global.trainingLogs.delete(trainingId);
+      (global as any).trainingLogs.delete(trainingId);
       return { message: `Cleared logs for training ${trainingId}` };
     } else {
-      global.trainingLogs.clear();
+      (global as any).trainingLogs.clear();
       return { message: 'Cleared all training logs' };
     }
   }
@@ -484,23 +484,23 @@ async function restartQueue() {
 
 async function forceCleanup() {
   // Force garbage collection if available
-  if (global.gc) {
-    global.gc();
+  if ((global as any).gc) {
+    (global as any).gc();
   }
   
   // Clear any cached data
   if (typeof global !== 'undefined') {
-    if (global.trainingLogs) {
-      const oldLogs = global.trainingLogs.size;
+    if ((global as any).trainingLogs) {
+      const oldLogs = (global as any).trainingLogs.size;
       // Keep only recent logs (last 24 hours)
       const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-      for (const [trainingId, data] of global.trainingLogs.entries()) {
+      for (const [trainingId, data] of (global as any).trainingLogs.entries()) {
         const sessionTime = new Date(data.session?.startTime || 0).getTime();
         if (sessionTime < cutoff) {
-          global.trainingLogs.delete(trainingId);
+          (global as any).trainingLogs.delete(trainingId);
         }
       }
-      const newLogs = global.trainingLogs.size;
+      const newLogs = (global as any).trainingLogs.size;
       return { 
         message: 'Cleanup completed',
         details: {

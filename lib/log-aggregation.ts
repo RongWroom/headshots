@@ -64,8 +64,8 @@ export class LogAggregationService {
 
   constructor() {
     // Initialize with global logs if available
-    if (typeof global !== 'undefined' && global.trainingLogs) {
-      this.logStore = global.trainingLogs;
+    if (typeof global !== 'undefined' && (global as any).trainingLogs) {
+      this.logStore = (global as any).trainingLogs;
     }
     
     // Update indexes periodically

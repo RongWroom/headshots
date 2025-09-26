@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     logger.logInfo('debug_request', { trainingId, action });
 
     // Get training logs from global storage (in production, this would be from database)
-    const trainingLogs = global.trainingLogs as Map<string, any> || new Map();
+    const trainingLogs = (global as any).trainingLogs as Map<string, any> || new Map();
 
     switch (action) {
       case 'overview':

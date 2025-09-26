@@ -456,10 +456,10 @@ export class TrainingLogger extends Logger {
     
     // Store in memory for debugging endpoints
     if (typeof global !== 'undefined') {
-      if (!global.trainingLogs) {
-        global.trainingLogs = new Map();
+      if (!(global as any).trainingLogs) {
+        (global as any).trainingLogs = new Map();
       }
-      global.trainingLogs.set(this.trainingId, {
+      (global as any).trainingLogs.set(this.trainingId, {
         session: this.session,
         logs
       });
