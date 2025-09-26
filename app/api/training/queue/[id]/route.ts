@@ -13,8 +13,9 @@ const supabase = createClient(
 // GET /api/training/queue/[id] - Get specific queue entry
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -69,8 +70,9 @@ export async function GET(
 // PATCH /api/training/queue/[id] - Update queue entry (for system use)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     // This endpoint is primarily for system/service use
     const authHeader = request.headers.get('authorization');
@@ -112,8 +114,9 @@ export async function PATCH(
 // DELETE /api/training/queue/[id] - Cancel queue entry
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
