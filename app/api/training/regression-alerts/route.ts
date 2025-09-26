@@ -240,6 +240,38 @@ export async function DELETE(request: NextRequest) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
+    // First, count how many records will be deleted
+    let countQuery = supabase
+      .from('regression_alerts')
+      .select('*', { count: 'exact', head: true })
+      .lt('detected_at', cutoffDate.toISOString());
+
+    if (onlyResolved) {
+      countQuery = countQuery.not('resolved_at', 'is', null);
+    }
+
+    const { count, error: countError } = await countQuery;
+
+    if (countError) {
+      console.error('Count error:', countError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to count regression alerts' },
+        { status: 500 }
+      );
+    }
+
+    const deletedCount = count || 0;
+
+    // If there are no records to delete, return early
+    if (deletedCount === 0) {
+      return NextResponse.json({
+        success: true,
+        data: { deletedCount: 0 },
+        message: `No regression alerts found older than ${olderThanDays} days`
+      });
+    }
+
+    // Now perform the actual delete
     let deleteQuery = supabase
       .from('regression_alerts')
       .delete()
@@ -249,19 +281,15 @@ export async function DELETE(request: NextRequest) {
       deleteQuery = deleteQuery.not('resolved_at', 'is', null);
     }
 
-    deleteQuery = deleteQuery.select();
+    const { error: deleteError } = await deleteQuery;
 
-    const { data, error } = await deleteQuery;
-
-    if (error) {
-      console.error('Delete error:', error);
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
       return NextResponse.json(
         { success: false, error: 'Failed to delete regression alerts' },
         { status: 500 }
       );
     }
-
-    const deletedCount = data?.length || 0;
 
     return NextResponse.json({
       success: true,
