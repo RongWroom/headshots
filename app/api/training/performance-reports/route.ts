@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const invalidTypes = reportTypes?.filter(type => !validReportTypes.includes(type)) || [];
+    const invalidTypes = reportTypes?.filter((type: string) => !validReportTypes.includes(type)) || [];
     if (invalidTypes.length > 0) {
       return NextResponse.json(
         { 
