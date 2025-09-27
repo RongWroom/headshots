@@ -123,7 +123,7 @@ export class QualityMonitoringService {
       return alerts;
     } catch (error) {
       console.error('Quality monitoring failed:', error);
-      throw new Error(`Quality monitoring failed: ${error.message}`);
+      throw new Error(`Quality monitoring failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

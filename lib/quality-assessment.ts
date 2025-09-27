@@ -92,7 +92,7 @@ export class QualityAssessmentService {
       try {
         await this.storeQualityMetrics(metrics);
       } catch (dbError) {
-        console.warn('Database storage failed, continuing without persistence:', dbError.message);
+        console.warn('Database storage failed, continuing without persistence:', dbError instanceof Error ? dbError.message : String(dbError));
       }
 
       return {
@@ -103,7 +103,7 @@ export class QualityAssessmentService {
       };
     } catch (error) {
       console.error('Quality assessment failed:', error);
-      throw new Error(`Quality assessment failed: ${error.message}`);
+      throw new Error(`Quality assessment failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -361,7 +361,7 @@ export class QualityAssessmentService {
         originalImageUrls: row.original_image_urls,
       }));
     } catch (error) {
-      console.warn('Failed to fetch quality history, returning empty array:', error.message);
+      console.warn('Failed to fetch quality history, returning empty array:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }

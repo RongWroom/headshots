@@ -717,7 +717,7 @@ export class SupabaseStorageProvider implements StorageProvider {
 
     const fileInfo = data[0];
     const fileBuffer = await this.download(path);
-    const hash = createHash('sha256').update(fileBuffer).digest('hex');
+    const hash = createHash('sha256').update(new Uint8Array(fileBuffer)).digest('hex');
 
     return {
       size: fileInfo.metadata?.size || fileBuffer.length,

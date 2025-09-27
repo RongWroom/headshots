@@ -154,6 +154,10 @@ export class Logger {
     const errorMessage = error instanceof Error ? error.message : String(error);
     await this.recordMetric(operation, false, errorMessage);
   }
+
+  protected getUserId(): string | undefined {
+    return this.userId;
+  }
 }
 
 // Utility function to safely extract error details

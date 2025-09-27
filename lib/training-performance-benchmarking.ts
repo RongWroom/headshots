@@ -245,10 +245,10 @@ export class TrainingPerformanceBenchmarkingService {
       trainingSession = await trainingMonitoringService.createTrainingSession({
         model_id: parseInt(benchmark.id.replace(/\D/g, '')), // Extract numeric ID
         user_id: 'benchmark-system',
-        provider: benchmark.provider,
+        provider: benchmark.provider as 'runpod' | 'replicate' | 'fal',
         external_training_id: `benchmark-${benchmark.id}-${Date.now()}`,
         total_steps: benchmark.training_config.max_train_steps,
-        training_config: benchmark.training_config
+        training_config: benchmark.training_config as any
       });
 
       // Simulate training execution (in real implementation, this would trigger actual training)

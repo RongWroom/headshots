@@ -116,7 +116,7 @@ export class TrainingDataProcessor {
     options: Partial<ProcessingOptions> = {}
   ): Promise<TrainingDataValidationResult> {
     const opts = { ...this.defaultOptions, ...options };
-    
+
     // Ensure directories exist
     await this.ensureDirectories();
 
@@ -141,12 +141,12 @@ export class TrainingDataProcessor {
 
     // Step 1: Download and validate images
     const downloadedImages = await this.downloadImages(imageUrls);
-    
+
     // Step 2: Remove duplicates if enabled
-    const uniqueImages = opts.enableDeduplication 
+    const uniqueImages = opts.enableDeduplication
       ? await this.removeDuplicates(downloadedImages)
       : downloadedImages;
-    
+
     result.duplicatesRemoved = downloadedImages.length - uniqueImages.length;
 
     // Step 3: Process each image
@@ -202,12 +202,12 @@ export class TrainingDataProcessor {
         }
 
         const buffer = await response.arrayBuffer();
-        const hash = createHash('md5').update(Buffer.from(buffer)).digest('hex');
+        const hash = createHash('md5').update(new Uint8Array(buffer)).digest('hex');
         const extension = this.getImageExtension(response.headers.get('content-type') || '');
         const filename = `${hash}.${extension}`;
         const filepath = path.join(this.tempDir, filename);
 
-        await fs.writeFile(filepath, Buffer.from(buffer));
+        await fs.writeFile(filepath, new Uint8Array(buffer));
         downloadedPaths.push(filepath);
       } catch (error) {
         console.warn(`Failed to download image ${i + 1}: ${error}`);
@@ -227,13 +227,13 @@ export class TrainingDataProcessor {
     for (const imagePath of imagePaths) {
       try {
         const hash = await this.calculatePerceptualHash(imagePath);
-        
+
         if (!hashes.has(hash)) {
           hashes.set(hash, imagePath);
           uniquePaths.push(imagePath);
         } else {
           // Remove duplicate file
-          await fs.unlink(imagePath).catch(() => {});
+          await fs.unlink(imagePath).catch(() => { });
         }
       } catch (error) {
         console.warn(`Failed to calculate hash for ${imagePath}: ${error}`);
@@ -287,7 +287,7 @@ export class TrainingDataProcessor {
       // Load image and get metadata
       const image = sharp(imagePath);
       const metadata = await image.metadata();
-      
+
       result.metadata = {
         originalSize: { width: metadata.width || 0, height: metadata.height || 0 },
         processedSize: { width: metadata.width || 0, height: metadata.height || 0 },
@@ -325,12 +325,12 @@ export class TrainingDataProcessor {
           result.faceDetection.primaryFace.width,
           result.faceDetection.primaryFace.height
         );
-        
+
         if (faceSize < options.minFaceSize) {
           result.errors.push(`Face too small: ${faceSize}px. Minimum: ${options.minFaceSize}px`);
           return result;
         }
-        
+
         if (faceSize > options.maxFaceSize) {
           result.warnings.push(`Face very large: ${faceSize}px. May affect training quality`);
         }
@@ -374,7 +374,7 @@ export class TrainingDataProcessor {
     if (options.cropToFace && result.faceDetection.primaryFace) {
       const face = result.faceDetection.primaryFace;
       const padding = Math.floor(Math.max(face.width, face.height) * options.facePadding);
-      
+
       const cropX = Math.max(0, face.x - padding);
       const cropY = Math.max(0, face.y - padding);
       const cropWidth = Math.min(width - cropX, face.width + padding * 2);
@@ -397,7 +397,7 @@ export class TrainingDataProcessor {
         fit: 'cover',
         position: 'center'
       });
-      
+
       result.preprocessing.wasResized = true;
       result.preprocessing.appliedFilters.push('resize');
       result.metadata.processedSize = {
@@ -410,13 +410,13 @@ export class TrainingDataProcessor {
     if (options.enableEnhancement) {
       // Sharpen slightly
       image = image.sharpen({ sigma: 0.5, m1: 0.5, m2: 2 });
-      
+
       // Adjust contrast and brightness based on quality metrics
       if (result.qualityMetrics.contrast < 0.5) {
         image = image.modulate({ brightness: 1.05, saturation: 1.1 });
         result.preprocessing.appliedFilters.push('contrast-boost');
       }
-      
+
       if (result.qualityMetrics.brightness < 0.4) {
         image = image.modulate({ brightness: 1.1 });
         result.preprocessing.appliedFilters.push('brightness-boost');
@@ -441,7 +441,7 @@ export class TrainingDataProcessor {
 
     // Save processed image
     await image.toFile(outputPath);
-    
+
     return outputPath;
   }
 
@@ -452,23 +452,23 @@ export class TrainingDataProcessor {
     // Get image statistics
     const stats = await image.stats();
     const { width, height } = await image.metadata();
-    
+
     // Convert to grayscale for analysis
     const grayBuffer = await image.clone().grayscale().raw().toBuffer();
     const pixels = new Uint8Array(grayBuffer);
-    
+
     // Calculate sharpness (Laplacian variance)
     const sharpness = this.calculateSharpness(pixels, width || 0, height || 0);
-    
+
     // Calculate brightness (mean luminance)
     const brightness = stats.channels.reduce((sum, channel) => sum + channel.mean, 0) / stats.channels.length / 255;
-    
+
     // Calculate contrast (standard deviation)
     const contrast = Math.sqrt(stats.channels.reduce((sum, channel) => sum + Math.pow(channel.stdev, 2), 0) / stats.channels.length) / 255;
-    
+
     // Calculate colorfulness (for color images)
     const colorfulness = stats.channels.length > 1 ? this.calculateColorfulness(stats) : 0;
-    
+
     // Calculate overall quality score
     const overallScore = (
       Math.min(sharpness / 1000, 1) * 0.3 +
@@ -491,7 +491,7 @@ export class TrainingDataProcessor {
    */
   private calculateSharpness(pixels: Uint8Array, width: number, height: number): number {
     if (width < 3 || height < 3) return 0;
-    
+
     let variance = 0;
     let mean = 0;
     let count = 0;
@@ -500,11 +500,11 @@ export class TrainingDataProcessor {
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const idx = y * width + x;
-        const laplacian = 
+        const laplacian =
           -pixels[idx - width - 1] - pixels[idx - width] - pixels[idx - width + 1] +
           -pixels[idx - 1] + 8 * pixels[idx] - pixels[idx + 1] +
           -pixels[idx + width - 1] - pixels[idx + width] - pixels[idx + width + 1];
-        
+
         mean += laplacian;
         count++;
       }
@@ -516,11 +516,11 @@ export class TrainingDataProcessor {
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const idx = y * width + x;
-        const laplacian = 
+        const laplacian =
           -pixels[idx - width - 1] - pixels[idx - width] - pixels[idx - width + 1] +
           -pixels[idx - 1] + 8 * pixels[idx] - pixels[idx + 1] +
           -pixels[idx + width - 1] - pixels[idx + width] - pixels[idx + width + 1];
-        
+
         variance += Math.pow(laplacian - mean, 2);
       }
     }
@@ -533,11 +533,11 @@ export class TrainingDataProcessor {
    */
   private calculateColorfulness(stats: sharp.Stats): number {
     if (stats.channels.length < 3) return 0;
-    
+
     // Simple colorfulness based on channel variance
     const channelVariances = stats.channels.map(channel => Math.pow(channel.stdev, 2));
     const totalVariance = channelVariances.reduce((sum, variance) => sum + variance, 0);
-    
+
     return Math.min(totalVariance / (255 * 255 * 3), 1);
   }
 
@@ -551,7 +551,7 @@ export class TrainingDataProcessor {
     // - MediaPipe Face Detection
     // - Cloud vision APIs (Google, AWS, Azure)
     // - TensorFlow.js face detection models
-    
+
     const result: ImageProcessingResult['faceDetection'] = {
       facesDetected: 0,
       faceRegions: [],
@@ -563,19 +563,19 @@ export class TrainingDataProcessor {
       const metadata = await sharp(imagePath).metadata();
       const width = metadata.width || 0;
       const height = metadata.height || 0;
-      
+
       // Simple heuristic: assume face detection based on image size and aspect ratio
       const aspectRatio = width / height;
       const isPortraitLike = aspectRatio > 0.6 && aspectRatio < 1.4;
       const isReasonableSize = width >= 256 && height >= 256;
-      
+
       if (isPortraitLike && isReasonableSize) {
         // Simulate detected face in center region
         const faceWidth = Math.floor(Math.min(width, height) * 0.4);
         const faceHeight = Math.floor(faceWidth * 1.2);
         const faceX = Math.floor((width - faceWidth) / 2);
         const faceY = Math.floor((height - faceHeight) / 2.5); // Slightly higher than center
-        
+
         const face = {
           x: faceX,
           y: faceY,
@@ -583,7 +583,7 @@ export class TrainingDataProcessor {
           height: faceHeight,
           confidence: 0.85
         };
-        
+
         result.facesDetected = 1;
         result.faceRegions = [face];
         result.primaryFace = face;
@@ -605,17 +605,17 @@ export class TrainingDataProcessor {
       .grayscale()
       .raw()
       .toBuffer();
-    
+
     // Calculate average pixel value
     const pixels = new Uint8Array(buffer);
     const average = pixels.reduce((sum, pixel) => sum + pixel, 0) / pixels.length;
-    
+
     // Create hash based on pixels above/below average
     let hash = '';
     for (const pixel of pixels) {
       hash += pixel > average ? '1' : '0';
     }
-    
+
     return hash;
   }
 
@@ -624,18 +624,18 @@ export class TrainingDataProcessor {
    */
   private calculateOverallQuality(processedImages: ImageProcessingResult[]): number {
     if (processedImages.length === 0) return 0;
-    
+
     const validImages = processedImages.filter(img => img.isValid);
     if (validImages.length === 0) return 0;
-    
+
     const averageQuality = validImages.reduce(
       (sum, img) => sum + img.qualityMetrics.overallScore, 0
     ) / validImages.length;
-    
+
     const faceDetectionRate = validImages.filter(
       img => img.faceDetection.facesDetected > 0
     ).length / validImages.length;
-    
+
     return averageQuality * 0.7 + faceDetectionRate * 0.3;
   }
 
@@ -647,35 +647,35 @@ export class TrainingDataProcessor {
     options: ProcessingOptions
   ): string[] {
     const recommendations: string[] = [];
-    
+
     if (result.validImages < 8) {
       recommendations.push('Upload at least 8 high-quality images for better training results');
     }
-    
+
     if (result.noFaceRemoved > 0) {
       recommendations.push(`${result.noFaceRemoved} images were removed due to no face detection. Ensure faces are clearly visible`);
     }
-    
+
     if (result.lowQualityRemoved > 0) {
       recommendations.push(`${result.lowQualityRemoved} images were removed due to low quality. Use sharp, well-lit photos`);
     }
-    
+
     if (result.duplicatesRemoved > 0) {
       recommendations.push(`${result.duplicatesRemoved} duplicate images were removed. Use varied poses and expressions`);
     }
-    
+
     if (result.overallQualityScore < 0.7) {
       recommendations.push('Consider using higher quality images with better lighting and sharpness');
     }
-    
+
     const avgFacesPerImage = result.processedImages.reduce(
       (sum, img) => sum + img.faceDetection.facesDetected, 0
     ) / result.processedImages.length;
-    
+
     if (avgFacesPerImage > 1.2) {
       recommendations.push('Some images contain multiple faces. Use photos with only one person for better results');
     }
-    
+
     return recommendations;
   }
 
@@ -690,7 +690,7 @@ export class TrainingDataProcessor {
       'image/webp': 'webp',
       'image/gif': 'gif'
     };
-    
+
     return typeMap[contentType.toLowerCase()] || 'jpg';
   }
 
@@ -729,7 +729,7 @@ export class TrainingDataProcessor {
         const files = await fs.readdir(dirPath);
         let totalSize = 0;
         let count = 0;
-        
+
         for (const file of files) {
           const filePath = path.join(dirPath, file);
           const stats = await fs.stat(filePath);
@@ -738,7 +738,7 @@ export class TrainingDataProcessor {
             count++;
           }
         }
-        
+
         return { size: totalSize, count };
       } catch {
         return { size: 0, count: 0 };

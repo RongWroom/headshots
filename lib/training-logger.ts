@@ -129,7 +129,7 @@ export class TrainingLogger extends Logger {
     return {
       id: this.generateLogId(),
       trainingId: this.trainingId,
-      userId: this.userId,
+      userId: this.getUserId(),
       timestamp: new Date().toISOString(),
       level,
       stage,
@@ -341,7 +341,7 @@ export class TrainingLogger extends Logger {
 
     // Calculate final duration
     const startTime = new Date(this.session.metrics.startTime).getTime();
-    const endTime = new Date(this.session.metrics.endTime).getTime();
+    const endTime = this.session.metrics.endTime ? new Date(this.session.metrics.endTime).getTime() : Date.now();
     this.session.metrics.duration = endTime - startTime;
 
     const entry = this.createLogEntry(
@@ -485,6 +485,12 @@ export class TrainingLogger extends Logger {
       session: this.session,
       exportTime: new Date().toISOString()
     }, null, 2);
+  }
+
+  // Generic info logging method
+  logInfo(stage: string, message: string, metadata?: Record<string, any>) {
+    const entry = this.createLogEntry('info', stage, message, metadata);
+    this.addLogEntry(entry);
   }
 }
 
