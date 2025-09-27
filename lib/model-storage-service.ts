@@ -555,7 +555,7 @@ export class ModelStorageServiceImpl implements ModelStorageService {
   private async generateFileHash(filePath: string): Promise<string> {
     try {
       const fileBuffer = await this.storageProvider.download(filePath);
-      return createHash('sha256').update(Buffer.from(fileBuffer)).digest('hex');
+      return createHash('sha256').update(new Uint8Array(fileBuffer)).digest('hex');
     } catch (error) {
       console.warn('Failed to generate file hash:', error);
       return createHash('sha256').update(filePath + Date.now()).digest('hex');
