@@ -85,5 +85,16 @@
     "@types/react": "18.2.12",
     "@types/react-dom": "18.2.5",
     "encoding": "^0.1.13"
+  },
+  "overrides": {
+    "rimraf": "^5.0.0",
+    "uuid": "^9.0.0",
+    "glob": "^10.0.0",
+    "debug": "^4.3.1",
+    "path-to-regexp": "^8.0.0",
+    "semver": "^7.6.0",
+    "tar": "^7.0.0",
+    "undici": "^6.0.0",
+    "esbuild": "^0.23.0"
   }
 }
