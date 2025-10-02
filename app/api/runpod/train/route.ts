@@ -235,6 +235,7 @@ export async function POST(req: Request) {
       ? (trainingConfig?.trigger_word || `sks${modelName.substring(0, 6)}`)
       : `sks${modelName.substring(0, 6)}`;
     const runpodPayload = {
+      webhook: process.env.NEXT_PUBLIC_WEBHOOK_URL || `${process.env.NEXT_PUBLIC_SITE_URL}/api/runpod/webhooks`,
       input: {
         image_urls: imageUrls,
         trigger_word: triggerWord,
