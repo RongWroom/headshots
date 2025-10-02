@@ -1,0 +1,228 @@
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx | Finished.
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx | }\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |   }\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     }\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |       "detail_level": "professional"\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |       "face_preservation": "high",\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |       "max_resolution": "4096x4096",\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "capabilities": {\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "status": "completed",\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "lora_rank": 64,\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "training_steps": 1500,\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "model_type": "flux_dev_lora",\n
+2025-10-02  17:30:36.550 | info | gn5pqnha0mqwfx |     "training_images": 10,\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |     "style_prompt": "professional actor headshot, dramatic lighting, cinematic, high detail",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |     "trigger_word": "sksnew-da",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "model_info": {\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "training_images_used": 10,\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "trigger_word": "sksnew-da",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "model_name": "new-dan",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "model_url": "https://your-storage.com/models/new-dan.safetensors",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "message": "Training completed successfully",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   "status": "success",\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx | 📊 Result: {\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx | ✅ Training completed successfully!\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Training completed!\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Saving model weights...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Training step 1500/1500...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Training step 1000/1500...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Training step 500/1500...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Training step 100/1500...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Starting training loop...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Processing training images...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Preparing LoRA configuration...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Loading FLUX Dev model...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Images: 10\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Style: professional actor headshot, dramatic lighting, cinematic, high detail\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx |   Trigger word: sksnew-da\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx | 🎯 Starting training simulation...\n
+2025-10-02  17:30:36.549 | info | gn5pqnha0mqwfx | ✅ Validated 10 images\n
+2025-10-02  17:30:36.266 | info | gn5pqnha0mqwfx |     ✅ Valid image: 3088x2316\n
+2025-10-02  17:30:36.266 | info | gn5pqnha0mqwfx |   Processing image 10/10\n
+2025-10-02  17:30:35.769 | info | gn5pqnha0mqwfx |     ✅ Valid image: 3088x2316\n
+2025-10-02  17:30:35.769 | info | gn5pqnha0mqwfx |   Processing image 9/10\n
+2025-10-02  17:30:35.291 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:30:35.291 | info | gn5pqnha0mqwfx |   Processing image 8/10\n
+2025-10-02  17:30:35.001 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:30:35.001 | info | gn5pqnha0mqwfx |   Processing image 7/10\n
+2025-10-02  17:30:34.615 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:30:34.614 | info | gn5pqnha0mqwfx |   Processing image 6/10\n
+2025-10-02  17:30:34.387 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:30:34.387 | info | gn5pqnha0mqwfx |   Processing image 5/10\n
+2025-10-02  17:30:34.118 | info | gn5pqnha0mqwfx |     ✅ Valid image: 996x1280\n
+2025-10-02  17:30:34.118 | info | gn5pqnha0mqwfx |   Processing image 4/10\n
+2025-10-02  17:30:33.531 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:30:33.531 | info | gn5pqnha0mqwfx |   Processing image 3/10\n
+2025-10-02  17:30:33.215 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:30:33.215 | info | gn5pqnha0mqwfx |   Processing image 2/10\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |   Processing image 1/10\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx | 📥 Processing 10 images...\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |   Images: 10\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |   Style: professional actor headshot, dramatic lighting, cinematic, high detail\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |   Trigger: sksnew-da\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx |   Model: new-dan\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx | 📋 Request details:\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx | 🚀 Starting FLUX Dev training handler...\n
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx | Started.
+2025-10-02  17:30:32.897 | info | gn5pqnha0mqwfx | Jobs in progress: 1
+2025-10-02  17:30:32.594 | info | gn5pqnha0mqwfx | Jobs in queue: 1
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx | Finished.
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx | }\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |   }\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     }\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |       "detail_level": "professional"\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |       "face_preservation": "high",\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |       "max_resolution": "4096x4096",\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "capabilities": {\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "status": "completed",\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "lora_rank": 64,\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "training_steps": 1500,\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "model_type": "flux_dev_lora",\n
+2025-10-02  17:16:37.518 | info | gn5pqnha0mqwfx |     "training_images": 10,\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |     "style_prompt": "professional actor headshot, dramatic lighting, cinematic, high detail",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |     "trigger_word": "sksdani",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "model_info": {\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "training_images_used": 10,\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "trigger_word": "sksdani",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "model_name": "daniel-spencer-headshots",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "model_url": "https://your-storage.com/models/daniel-spencer-headshots.safetensors",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "message": "Training completed successfully",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   "status": "success",\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx | 📊 Result: {\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx | ✅ Training completed successfully!\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Training completed!\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Saving model weights...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Training step 1500/1500...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Training step 1000/1500...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Training step 500/1500...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Training step 100/1500...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Starting training loop...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Processing training images...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Preparing LoRA configuration...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Loading FLUX Dev model...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Images: 10\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Style: professional actor headshot, dramatic lighting, cinematic, high detail\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx |   Trigger word: sksdani\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx | 🎯 Starting training simulation...\n
+2025-10-02  17:16:37.517 | info | gn5pqnha0mqwfx | ✅ Validated 10 images\n
+2025-10-02  17:16:37.265 | info | gn5pqnha0mqwfx |     ✅ Valid image: 3088x2316\n
+2025-10-02  17:16:37.265 | info | gn5pqnha0mqwfx |   Processing image 10/10\n
+2025-10-02  17:16:36.837 | info | gn5pqnha0mqwfx |     ✅ Valid image: 3088x2316\n
+2025-10-02  17:16:36.837 | info | gn5pqnha0mqwfx |   Processing image 9/10\n
+2025-10-02  17:16:36.425 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:16:36.425 | info | gn5pqnha0mqwfx |   Processing image 8/10\n
+2025-10-02  17:16:36.097 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:16:36.097 | info | gn5pqnha0mqwfx |   Processing image 7/10\n
+2025-10-02  17:16:35.755 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1440x960\n
+2025-10-02  17:16:35.755 | info | gn5pqnha0mqwfx |   Processing image 6/10\n
+2025-10-02  17:16:35.390 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:16:35.390 | info | gn5pqnha0mqwfx |   Processing image 5/10\n
+2025-10-02  17:16:35.006 | info | gn5pqnha0mqwfx |     ✅ Valid image: 996x1280\n
+2025-10-02  17:16:35.006 | info | gn5pqnha0mqwfx |   Processing image 4/10\n
+2025-10-02  17:16:34.662 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:16:34.662 | info | gn5pqnha0mqwfx |   Processing image 3/10\n
+2025-10-02  17:16:34.253 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:16:34.253 | info | gn5pqnha0mqwfx |   Processing image 2/10\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |     ✅ Valid image: 960x1280\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |   Processing image 1/10\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx | 📥 Processing 10 images...\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |   Images: 10\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |   Style: professional actor headshot, dramatic lighting, cinematic, high detail\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |   Trigger: sksdani\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx |   Model: daniel-spencer-headshots\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx | 📋 Request details:\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx | 🚀 Starting FLUX Dev training handler...\n
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx | Started.
+2025-10-02  17:16:33.876 | info | gn5pqnha0mqwfx | Jobs in progress: 1
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx | Jobs in queue: 1
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx | Finished.
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx | }\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   }\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     }\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |       "detail_level": "professional"\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |       "face_preservation": "high",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |       "max_resolution": "4096x4096",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "capabilities": {\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "status": "completed",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "lora_rank": 64,\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "training_steps": 1500,\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "model_type": "flux_dev_lora",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "training_images": 34,\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "style_prompt": "professional headshot photography, signature lighting style, high-end portrait photography, masterful composition",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |     "trigger_word": "sksdan-",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "model_info": {\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "training_images_used": 34,\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "trigger_word": "sksdan-",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "model_name": "dan-dan-signature-style",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "model_url": "https://your-storage.com/models/dan-dan-signature-style.safetensors",\n
+2025-10-02  17:16:33.519 | info | gn5pqnha0mqwfx |   "message": "Training completed successfully",\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   "status": "success",\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx | 📊 Result: {\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx | ✅ Training completed successfully!\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Training completed!\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Saving model weights...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Training step 1500/1500...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Training step 1000/1500...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Training step 500/1500...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Training step 100/1500...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Starting training loop...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Processing training images...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Preparing LoRA configuration...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Loading FLUX Dev model...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Images: 34\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Style: professional headshot photography, signature lighting style, high-end portrait photography, masterful composition\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Trigger word: sksdan-\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx | 🎯 Starting training simulation...\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx | ✅ Validated 34 images\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Processing image 34/34\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.518 | info | gn5pqnha0mqwfx |   Processing image 33/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 32/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 31/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 30/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 29/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 28/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 27/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 26/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 25/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 24/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 23/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 22/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 21/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 20/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 19/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 18/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 17/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 16/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 15/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 14/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 13/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 12/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 11/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |   Processing image 10/34\n
+2025-10-02  17:16:33.517 | info | gn5pqnha0mqwfx |     ✅ Valid image: 1280x1920\n

@@ -37,9 +37,14 @@ export default async function TrainModelPage(props: PageProps) {
         </Link>
         <Card>
           <CardHeader>
-            <CardTitle>Train Model</CardTitle>
+            <CardTitle>
+              {params.id === 'raw-tune' ? 'Train Your Photography Style' : 'Train Model'}
+            </CardTitle>
             <CardDescription>
-              Choose a name, type, and upload some photos to get started.
+              {params.id === 'raw-tune' 
+                ? 'Upload examples of your best headshot photography to train a model that captures your unique style and aesthetic.'
+                : 'Choose a name, type, and upload some photos to get started.'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">

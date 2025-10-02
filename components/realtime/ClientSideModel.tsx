@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { AspectRatio } from "../ui/aspect-ratio";
 import { Badge } from "../ui/badge";
+import GenerateHeadshotsZone from "../GenerateHeadshotsZone";
 
 export const revalidate = 0;
 
@@ -44,9 +45,23 @@ export default function ClientSideModel({
     };
   }, [supabase, model, setModel]);
 
+  const isCustomerModel = model.type !== "raw-tune";
+  const canGenerate = model.status === "finished" && isCustomerModel;
+
   return (
     <div id="train-model-container" className="w-full h-full">
       <div className="flex flex-col w-full mt-4 gap-8">
+        
+        {/* Generation Interface - Only for customer models */}
+        {canGenerate && (
+          <div className="w-full">
+            <GenerateHeadshotsZone 
+              modelId={model.id} 
+              modelName={model.name || "Your Model"} 
+            />
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-0">
           {samples && (
             <div className="flex w-full lg:w-1/2 flex-col gap-2">

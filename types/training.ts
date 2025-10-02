@@ -43,7 +43,7 @@ export const trainRequestSchema = z.object({
   modelName: z.string()
     .min(1, "Model name is required")
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Model name must be lowercase alphanumeric with hyphens only (e.g., my-model-name)"),
-  packSlug: z.enum(["actor-headshots", "corporate-headshots", "creative-headshots"]).optional(),
+  packSlug: z.enum(["actor-headshots", "corporate-headshots", "creative-headshots", "raw-tune"]).optional(),
   trainingConfig: optimizedTrainingConfigSchema.optional()
 });
 

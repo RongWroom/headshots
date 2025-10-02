@@ -96,8 +96,8 @@ export function validateImageFiles(files: File[]): {
   invalidFiles: { file: File; validation: ImageValidationResult }[];
   totalSize: number;
 } {
-  const maxTotalSize = 50 * 1024 * 1024; // 50MB
-  const maxFileCount = 10;
+  const maxTotalSize = 200 * 1024 * 1024; // 200MB
+  const maxFileCount = 50;
 
   const result = {
     isValid: true,

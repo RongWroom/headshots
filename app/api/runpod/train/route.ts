@@ -206,6 +206,10 @@ export async function POST(req: Request) {
     logger.logInfo('STYLE_CONFIG_START', { packSlug });
     
     const styleConfig = {
+      "raw-tune": {
+        style_prompt: "professional headshot photography, signature lighting style, high-end portrait photography, masterful composition",
+        description: "Custom photography style training for signature aesthetic"
+      },
       "actor-headshots": {
         style_prompt: "professional actor headshot, dramatic lighting, cinematic, high detail",
         description: "Hollywood-style actor headshots with dramatic lighting"
@@ -226,7 +230,10 @@ export async function POST(req: Request) {
     });
 
     // Prepare RunPod training request with optimized parameters
-    const triggerWord = trainingConfig?.trigger_word || `sks${modelName.substring(0, 6)}`;
+    // For customer models, auto-generate trigger word; for photographer training, use provided trigger word
+    const triggerWord = packSlug === "raw-tune" 
+      ? (trainingConfig?.trigger_word || `sks${modelName.substring(0, 6)}`)
+      : `sks${modelName.substring(0, 6)}`;
     const runpodPayload = {
       input: {
         image_urls: imageUrls,
@@ -393,6 +400,36 @@ export async function POST(req: Request) {
       triggerWord,
       imageCount: imageUrls.length
     });
+
+    // Save model to database immediately after training starts
+    logger.logInfo('DATABASE_SAVE_START');
+    try {
+      const { data: savedModel, error: dbError } = await supabase
+        .from('models')
+        .insert({
+          name: modelName,
+          user_id: userId,
+          status: 'processing',
+          modelId: runpodResult.id,
+          type: packSlug || 'corporate-headshots',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        logger.logError('DATABASE_SAVE_FAILED', dbError);
+        // Don't fail the request, just log the error
+      } else {
+        logger.logSuccess('DATABASE_SAVE_SUCCESS', {
+          modelDatabaseId: savedModel.id,
+          trainingId: runpodResult.id
+        });
+      }
+    } catch (dbSaveError) {
+      logger.logError('DATABASE_SAVE_ERROR', dbSaveError);
+      // Don't fail the request, just log the error
+    }
 
     const response = NextResponse.json(successResponse);
     

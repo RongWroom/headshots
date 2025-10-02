@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { trainingMonitoringService } from '@/lib/training-monitoring';
+import { createServerClient } from '@supabase/ssr';
 import { Logger } from '@/lib/logger';
 import { RunPodWebhookPayload } from '@/types/training-monitoring';
 
@@ -50,17 +50,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process the webhook event
+    // Process the webhook event - update model status in database
     try {
-      await trainingMonitoringService.processWebhookEvent({
-        provider: 'runpod',
-        event_type: 'status_update',
-        event_data: payload
-      });
+      // Create Supabase client for database operations
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get() { return undefined; },
+            set() {},
+            remove() {},
+          },
+        }
+      );
+
+      // Map RunPod status to our database status
+      const statusMapping = {
+        'IN_QUEUE': 'processing',
+        'IN_PROGRESS': 'processing', 
+        'COMPLETED': 'finished',
+        'FAILED': 'failed',
+        'CANCELLED': 'failed'
+      };
+
+      const dbStatus = statusMapping[payload.status as keyof typeof statusMapping] || 'processing';
+
+      // Update model status in database
+      const { data: updatedModel, error: updateError } = await supabase
+        .from('models')
+        .update({ 
+          status: dbStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('modelId', payload.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.logError('MODEL_UPDATE_FAILED', updateError, {
+          trainingId: payload.id,
+          status: payload.status,
+          dbStatus
+        });
+      } else {
+        logger.logSuccess('MODEL_UPDATED', {
+          trainingId: payload.id,
+          status: payload.status,
+          dbStatus,
+          modelDatabaseId: updatedModel?.id
+        });
+      }
+
+      // If training completed successfully, we could also save the model URL here
+      if (payload.status === 'COMPLETED' && payload.output?.model_url) {
+        logger.logInfo('TRAINING_COMPLETED', {
+          trainingId: payload.id,
+          modelUrl: payload.output.model_url
+        });
+      }
 
       logger.logSuccess('RUNPOD_WEBHOOK_PROCESSED', {
         trainingId: payload.id,
-        status: payload.status
+        status: payload.status,
+        dbStatus
       });
 
       return NextResponse.json({ 
