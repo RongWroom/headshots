@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { generateImage } from '@/lib/replicate';
-import { Logger, extractErrorDetails } from '@/lib/logger';
+import { Logger } from '@/lib/logger';
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +17,15 @@ export async function POST(req: Request) {
           get(name: string) {
             return req.headers.get('cookie')?.split('; ').find(row => row.startsWith(`${name}=`))?.split('=')[1];
           },
-          set() {},
-          remove() {},
+          set() { },
+          remove() { },
         },
       }
     );
 
     // Authentication check
     const { data: { user }, error } = await supabase.auth.getUser();
-    
+
     if (error || !user) {
       logger.logError('AUTH_FAILED', error || 'No user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,8 +38,8 @@ export async function POST(req: Request) {
     const { modelId, prompt, packSlug, numOutputs = 4 } = await req.json();
 
     if (!modelId || !prompt) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: modelId and prompt' 
+      return NextResponse.json({
+        error: 'Missing required fields: modelId and prompt'
       }, { status: 400 });
     }
 
@@ -62,8 +60,8 @@ export async function POST(req: Request) {
 
     if (modelError || !customerModel) {
       logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', { error: modelError });
-      return NextResponse.json({ 
-        error: 'Model not found or access denied' 
+      return NextResponse.json({
+        error: 'Model not found or access denied'
       }, { status: 404 });
     }
 
@@ -81,10 +79,10 @@ export async function POST(req: Request) {
       logger.logWarning('STYLE_MODEL_NOT_FOUND', 'No photographer style model found, using default');
     }
 
-    // Build the enhanced prompt with style injection
-    const baseStyleTrigger = styleModel ? 'sksdan-' : ''; // Your style trigger word
-    const customerTrigger = `sks${customerModel.name?.substring(0, 6) || 'user'}`;
-    
+    // Build the enhanced prompt for Replicate generation
+    // Since we're using the Replicate style model, we need to use a generic approach
+    // The customer's specific face training from RunPod can't be directly used with Replicate
+
     // Pack-specific style modifiers
     const packStyles = {
       'actor-headshots': 'professional actor headshot, dramatic lighting, cinematic, high detail',
@@ -93,73 +91,62 @@ export async function POST(req: Request) {
     };
 
     const packStyle = packStyles[packSlug as keyof typeof packStyles] || packStyles['corporate-headshots'];
-    
-    // Combine all elements: customer face + photographer style + pack style
-    const enhancedPrompt = styleModel 
-      ? `${packStyle} of ${customerTrigger}, ${baseStyleTrigger} style, ${prompt}`
-      : `${packStyle} of ${customerTrigger}, ${prompt}`;
+
+    // For now, use the Replicate style model with the user's prompt
+    // TODO: Implement proper RunPod model integration for personalized faces
+    const enhancedPrompt = `${packStyle}, ${prompt}, professional photography, high quality, detailed`;
 
     logger.logInfo('PROMPT_ENHANCED', {
       originalPrompt: prompt,
       enhancedPrompt,
-      customerTrigger,
       styleModelFound: !!styleModel,
       packStyle
     });
 
-    // Generate images using the customer's model with style injection
-    const modelVersion = customerModel.modelId; // This should be the Replicate model version
-    
-    if (!modelVersion) {
-      return NextResponse.json({ 
-        error: 'Model version not found. Model may not be fully trained.' 
-      }, { status: 400 });
+    // Use RunPod for generation with the customer's trained model
+    logger.logInfo('USING_RUNPOD_GENERATION', {
+      modelId: customerModel.modelId,
+      enhancedPrompt
+    });
+
+    // Forward to RunPod generation endpoint
+    const runpodGenerationResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/runpod/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.headers.get('cookie') || ''
+      },
+      body: JSON.stringify({
+        modelId,
+        prompt,
+        packSlug,
+        numOutputs
+      })
+    });
+
+    if (!runpodGenerationResponse.ok) {
+      const errorData = await runpodGenerationResponse.json().catch(() => ({}));
+      logger.logError('RUNPOD_GENERATION_FAILED', errorData.error || 'Generation failed');
+
+      return NextResponse.json({
+        error: errorData.error || 'Generation failed',
+        details: errorData.details
+      }, { status: runpodGenerationResponse.status });
     }
 
-    const generationResult = await generateImage(
-      modelVersion,
-      enhancedPrompt,
-      "blurry, low quality, distorted, bad anatomy", // negative prompt
-      numOutputs
-    );
+    const generationResult = await runpodGenerationResponse.json();
 
     logger.logSuccess('GENERATION_COMPLETED', {
-      generationId: generationResult.id,
+      generationId: generationResult.generationId,
       status: generationResult.status
     });
 
-    // Store generation job in database
-    const { data: generationJob, error: jobError } = await supabase
-      .from('generation_jobs')
-      .insert({
-        user_id: userId,
-        status: 'processing',
-        style: packSlug || 'corporate-headshots',
-        poses: [prompt],
-        runpod_job_id: generationResult.id
-      })
-      .select()
-      .single();
-
-    if (jobError) {
-      logger.logWarning('GENERATION_JOB_SAVE_FAILED', jobError.message || 'Failed to save generation job', { error: jobError });
-    }
-
-    return NextResponse.json({
-      success: true,
-      generationId: generationResult.id,
-      status: generationResult.status,
-      jobId: generationJob?.id,
-      enhancedPrompt,
-      message: styleModel 
-        ? 'Generating headshots with your photographer\'s signature style'
-        : 'Generating headshots with default style',
-      estimatedTime: '2-3 minutes'
-    });
+    // Return the result from RunPod generation
+    return NextResponse.json(generationResult);
 
   } catch (error) {
     logger.logError('GENERATION_REQUEST_ERROR', error);
-    
+
     return NextResponse.json({
       error: 'Generation request failed',
       details: error instanceof Error ? error.message : 'Unknown error'
