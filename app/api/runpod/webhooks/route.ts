@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
 
     // Process the webhook event - update model status in database
     try {
-      // Create Supabase client for database operations
+      // Create Supabase client for database operations with service role key
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
         {
           cookies: {
             get() { return undefined; },
@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
       const { data: updatedModel, error: updateError } = await supabase
         .from('models')
         .update({ 
-          status: dbStatus,
-          updated_at: new Date().toISOString()
+          status: dbStatus
         })
         .eq('modelId', payload.id)
         .select()
