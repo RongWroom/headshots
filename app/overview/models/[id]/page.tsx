@@ -41,23 +41,27 @@ export default async function Index(props: PageProps) {
     return <Login />;
   }
 
-  const { data: model } = await supabase
+  const { data: model, error } = await supabase
     .from("models")
     .select("*")
     .eq("id", Number(params.id))
     .eq("user_id", user.id)
     .single();
 
-  if (!model) {
+  if (!model || error) {
     redirect("/overview");
   }
+
+  // Type assertion to help TypeScript understand the model type
+  const validModel = model as Database['public']['Tables']['models']['Row'];
+  const modelId = validModel.id;
 
   const { data: images } = await supabase
     .from("images")
     .select("*")
-    .eq("modelId", model.id);
+    .eq("modelId", modelId);
 
-  const { data: samples } = await supabase.from("samples").select("*").eq("modelId", model.id);
+  const { data: samples } = await supabase.from("samples").select("*").eq("modelId", modelId);
 
   return (
     <div id="train-model-container" className="w-full h-full">
@@ -69,14 +73,14 @@ export default async function Index(props: PageProps) {
           </Button>
         </Link>
         <div className="flex flex-row gap-2 align-middle text-center items-center pb-4">
-          <h1 className="text-xl">{model.name}</h1>
+          <h1 className="text-xl">{validModel.name}</h1>
           <div>
             <Badge
-              variant={model.status === "finished" ? "default" : "secondary"}
+              variant={validModel.status === "finished" ? "default" : "secondary"}
               className="text-xs font-medium"
             >
-              {model.status === "processing" ? "training" : model.status }
-              {model.status === "processing" && (
+              {validModel.status === "processing" ? "training" : validModel.status }
+              {validModel.status === "processing" && (
                 <Icons.spinner className="h-4 w-4 animate-spin ml-2 inline-block" />
               )}
             </Badge>
@@ -84,7 +88,7 @@ export default async function Index(props: PageProps) {
         </div>
       </div>
 
-      <ClientSideModel samples={samples ?? []} serverModel={model} serverImages={images ?? []} />
+      <ClientSideModel samples={samples ?? []} serverModel={validModel} serverImages={images ?? []} />
     </div>
   );
 }
