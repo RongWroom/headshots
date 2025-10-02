@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         ]
       );
       
-      logger.logError('RUNPOD_STATUS_FAILED', statusError, { trainingId });
+      logger.logError('RUNPOD_STATUS_FAILED', statusError.message || 'Failed to get status', { error: statusError, trainingId });
       
       // Use appropriate HTTP status code
       let statusCode = 500;
@@ -244,7 +244,7 @@ export async function DELETE(request: Request) {
         ]
       );
       
-      logger.logError('RUNPOD_CANCEL_FAILED', cancelError, { trainingId });
+      logger.logError('RUNPOD_CANCEL_FAILED', cancelError.message || 'Failed to cancel training', { error: cancelError, trainingId });
       
       let statusCode = 500;
       if (cancelError.code === 'AUTH_ERROR') statusCode = 401;

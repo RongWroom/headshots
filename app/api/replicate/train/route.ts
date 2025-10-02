@@ -154,6 +154,10 @@ export async function POST(req: Request) {
     logger.logInfo('STYLE_CONFIG_START', { packSlug });
     
     const styleConfig = {
+      "raw-tune": {
+        style_prompt: "professional headshot photography, signature lighting style, high-end portrait photography, masterful composition",
+        lora_type: "style" as const
+      },
       "actor-headshots": {
         style_prompt: "professional actor headshot, dramatic lighting, cinematic, high detail, 85mm",
         lora_type: "style" as const

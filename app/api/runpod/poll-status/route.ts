@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       .single();
 
     if (updateError) {
-      logger.logError('MODEL_UPDATE_FAILED', updateError);
+      logger.logError('MODEL_UPDATE_FAILED', updateError.message || 'Failed to update model', { error: updateError });
     } else {
       logger.logSuccess('MODEL_STATUS_UPDATED', {
         trainingId,

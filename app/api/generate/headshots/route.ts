@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       .single();
 
     if (modelError || !customerModel) {
-      logger.logError('MODEL_NOT_FOUND', modelError);
+      logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', { error: modelError });
       return NextResponse.json({ 
         error: 'Model not found or access denied' 
       }, { status: 404 });
@@ -142,7 +142,7 @@ export async function POST(req: Request) {
       .single();
 
     if (jobError) {
-      logger.logWarning('GENERATION_JOB_SAVE_FAILED', jobError);
+      logger.logWarning('GENERATION_JOB_SAVE_FAILED', jobError.message || 'Failed to save generation job', { error: jobError });
     }
 
     return NextResponse.json({

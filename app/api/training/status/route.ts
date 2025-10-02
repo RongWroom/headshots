@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         .single();
 
       if (modelError) {
-        logger.logError('MODEL_FETCH_FAILED', modelError, { modelId });
+        logger.logError('MODEL_FETCH_FAILED', modelError.message || 'Failed to fetch model', { error: modelError, modelId });
         return NextResponse.json(
           { error: 'Model not found' },
           { status: 404 }

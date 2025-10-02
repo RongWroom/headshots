@@ -178,7 +178,7 @@ export async function POST(request: Request) {
         .eq('user_id', userId);
 
       if (error) {
-        logger.logError('MODEL_UPDATE_FAILED', error, { modelId, userId, status });
+        logger.logError('MODEL_UPDATE_FAILED', error.message || 'Failed to update model', { error, modelId, userId, status });
         throw error;
       }
 
@@ -351,7 +351,7 @@ async function sendTrainingCompletionNotification(
       .single();
 
     if (modelError) {
-      logger.logError('EMAIL_MODEL_FETCH_FAILED', modelError);
+      logger.logError('EMAIL_MODEL_FETCH_FAILED', modelError.message || 'Failed to fetch model for email', { error: modelError });
       return;
     }
 

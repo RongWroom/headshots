@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (updateError) {
-        logger.logError('MODEL_UPDATE_FAILED', updateError, {
+        logger.logError('MODEL_UPDATE_FAILED', updateError.message || 'Failed to update model', {
+          error: updateError,
           trainingId: payload.id,
           status: payload.status,
           dbStatus

@@ -419,7 +419,7 @@ export async function POST(req: Request) {
         .single();
 
       if (dbError) {
-        logger.logError('DATABASE_SAVE_FAILED', dbError);
+        logger.logError('DATABASE_SAVE_FAILED', dbError.message || 'Failed to save to database', { error: dbError });
         // Don't fail the request, just log the error
       } else {
         logger.logSuccess('DATABASE_SAVE_SUCCESS', {
