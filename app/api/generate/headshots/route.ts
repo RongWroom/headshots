@@ -16,16 +16,29 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const debugSteps: string[] = [];
+
   try {
+    debugSteps.push('1. API request started');
     logger.logInfo('API_REQUEST_START', 'Starting headshots generation request');
+    console.log('🚀 CHECKPOINT 1: API request started');
 
     // Validate environment variables
+    debugSteps.push('2. Validating environment variables');
+    console.log('🚀 CHECKPOINT 2: Validating environment variables');
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       logger.logError('ENV_MISSING', 'Missing Supabase environment variables');
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Server configuration error',
+        debugSteps,
+        failedAt: 'Environment validation'
+      }, { status: 500 });
     }
+    debugSteps.push('2. ✅ Environment variables OK');
+    console.log('✅ CHECKPOINT 2: Environment variables OK');
 
     // Create Supabase client
+    debugSteps.push('3. Creating Supabase client');
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -39,9 +52,13 @@ export async function POST(req: Request) {
         },
       }
     );
+    debugSteps.push('3. ✅ Supabase client created');
 
     // Authentication check
+    debugSteps.push('4. Checking authentication');
+    console.log('🚀 CHECKPOINT 3: Checking authentication');
     const { data: { user }, error } = await supabase.auth.getUser();
+    console.log('🚀 CHECKPOINT 3.1: Auth result:', { hasUser: !!user, hasError: !!error });
 
     if (error || !user) {
       logger.logError('AUTH_FAILED', error || 'No user found', {
@@ -65,9 +82,11 @@ export async function POST(req: Request) {
     logger.logInfo('USER_AUTHENTICATED', { userId });
 
     // Parse request
+    console.log('🚀 CHECKPOINT 4: Parsing request body');
     let requestBody;
     try {
       requestBody = await req.json();
+      console.log('✅ CHECKPOINT 4: Request parsed successfully');
       logger.logInfo('REQUEST_PARSED', {
         hasModelId: !!requestBody.modelId,
         hasPrompt: !!requestBody.prompt,
@@ -335,9 +354,26 @@ export async function POST(req: Request) {
   } catch (error) {
     logger.logError('GENERATION_REQUEST_ERROR', error);
 
+    // Enhanced error response for debugging
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    };
+
     return NextResponse.json({
       error: 'Generation request failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorDetails.message,
+      debugSteps: debugSteps || ['Error occurred before debug steps were initialized'],
+      debug: {
+        errorName: errorDetails.name,
+        errorMessage: errorDetails.message,
+        timestamp: errorDetails.timestamp,
+        stack: errorDetails.stack,
+        nodeEnv: process.env.NODE_ENV,
+        lastStep: debugSteps ? debugSteps[debugSteps.length - 1] : 'Unknown'
+      }
     }, { status: 500 });
   }
 }
