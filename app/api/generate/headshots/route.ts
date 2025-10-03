@@ -103,9 +103,9 @@ export async function POST(req: Request) {
       packStyle
     });
 
-    // Use RunPod for generation with the customer's trained model
-    const triggerWord = `sks${customerModel.name?.substring(0, 6) || 'user'}`;
-    const finalPrompt = `${packStyle} of ${triggerWord}, ${prompt}, professional photography, high quality, detailed`;
+    // Build enhanced prompt for FLUX.1 Dev (generic for now)
+    // Note: Not using trigger word since we're testing with generic FLUX
+    const finalPrompt = `${packStyle}, ${prompt}, professional photography studio lighting, high resolution, sharp focus, detailed facial features, commercial quality headshot`;
 
     logger.logInfo('USING_RUNPOD_GENERATION', {
       modelId: customerModel.modelId,
@@ -124,38 +124,24 @@ export async function POST(req: Request) {
       }, { status: 503 });
     }
 
-    // Get the actual model URL from RunPod training results
-    const modelUrlResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/runpod/model-url?modelId=${modelId}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.RUNPOD_API_KEY}`
-      }
+    // For now, we'll use FLUX.1 Dev without custom models (testing phase)
+    // TODO: Later integrate custom LoRA models for personalization
+    logger.logInfo('USING_FLUX_DEV_GENERIC', {
+      modelName: customerModel.name,
+      note: 'Using generic FLUX.1 Dev for testing - personalization coming later'
     });
 
-    if (!modelUrlResponse.ok) {
-      const errorData = await modelUrlResponse.json().catch(() => ({}));
-      return NextResponse.json({
-        error: 'Model not ready for generation',
-        details: errorData.error || 'Could not retrieve model URL',
-        message: 'Please wait for training to complete or try again later'
-      }, { status: 503 });
-    }
-
-    const modelData = await modelUrlResponse.json();
-
-    // Prepare FLUX kontext inference request
+    // Prepare FLUX.1 Dev inference request (text-to-image)
     const runpodPayload = {
       input: {
         prompt: finalPrompt,
-        lora_url: modelData.modelUrl, // Your trained LoRA model
-        lora_scale: 0.8, // LoRA strength (0.6-1.0 for good face likeness)
         width: 1024,
         height: 1024,
-        num_outputs: numOutputs,
-        guidance_scale: 3.5, // FLUX works better with lower guidance
-        num_inference_steps: 28, // Good balance of quality/speed
+        num_inference_steps: 28,
+        guidance: 5.0, // Good for portraits
         seed: -1, // Random seed
-        output_format: "webp",
-        output_quality: 90
+        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured, multiple people, crowd",
+        image_format: "webp"
       }
     };
 
@@ -221,9 +207,10 @@ export async function POST(req: Request) {
       status: generationResult.status,
       jobId: generationJob?.id,
       enhancedPrompt: finalPrompt,
-      message: 'Generating personalized headshots with your trained model',
-      estimatedTime: '1-2 minutes',
-      triggerWord
+      message: 'Generating professional headshots with FLUX.1 Dev',
+      estimatedTime: '30-60 seconds',
+      note: 'Testing phase: Using generic FLUX model. Personalization will be added next.',
+      modelUsed: 'FLUX.1 Dev (Generic)'
     });
 
   } catch (error) {
