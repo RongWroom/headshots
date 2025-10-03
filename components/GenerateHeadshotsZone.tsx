@@ -51,7 +51,7 @@ export default function GenerateHeadshotsZone({ modelId, modelName }: GenerateHe
     setIsGenerating(true);
     
     try {
-      const response = await fetch('/api/generate/headshots-replicate', {
+      const response = await fetch('/api/runpod/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
