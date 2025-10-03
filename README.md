@@ -8,7 +8,7 @@ This project was built to give developers & makers a great starting point into b
 
 ## Features
 
-- 🚀 Powered by Replicate for AI model training & inference
+- 🚀 Powered by Flux for AI model training & inference
 - 🎨 Multiple style options for headshots
 - 🔒 Secure authentication with Supabase
 - 💳 Optional Stripe integration for payments
