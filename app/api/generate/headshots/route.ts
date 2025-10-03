@@ -309,9 +309,26 @@ export async function POST(req: Request) {
         status: response.status
       });
 
+      // If RunPod fails with 404, fall back to Replicate if enabled
+      if (response.status === 404 && process.env.NEXT_PUBLIC_USE_REPLICATE === "true") {
+        logger.logWarning('RUNPOD_404_FALLBACK_TO_REPLICATE', 'RunPod endpoint not found, falling back to Replicate');
+
+        return NextResponse.json({
+          error: 'RunPod inference endpoint not available',
+          message: 'The RunPod inference endpoint is not properly configured. Please set up a RunPod serverless endpoint for ComfyUI inference.',
+          suggestion: 'Use Replicate for generation instead, or configure a proper RunPod inference endpoint',
+          details: {
+            runpodError: `HTTP ${response.status}`,
+            runpodEndpoint: runpodEndpoint,
+            replicateAvailable: process.env.NEXT_PUBLIC_USE_REPLICATE === "true"
+          }
+        }, { status: 503 });
+      }
+
       return NextResponse.json({
         error: 'Generation request failed',
-        details: errorData.error || `HTTP ${response.status}`
+        details: errorData.error || `HTTP ${response.status}`,
+        runpodEndpoint: runpodEndpoint
       }, { status: 500 });
     }
 
