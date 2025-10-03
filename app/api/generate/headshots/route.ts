@@ -171,8 +171,8 @@ export async function POST(req: Request) {
       }
     };
 
-    // Send request to RunPod inference endpoint
-    const runpodEndpoint = inferenceEndpoint;
+    // Send request to RunPod inference endpoint (fallback to training endpoint if needed)
+    const runpodEndpoint = inferenceEndpoint || process.env.RUNPOD_TRAINING_ENDPOINT;
 
     if (!runpodEndpoint || !process.env.RUNPOD_API_KEY) {
       logger.logError('RUNPOD_CONFIG_MISSING', 'RunPod endpoint or API key not configured');
