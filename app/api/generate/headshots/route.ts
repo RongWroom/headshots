@@ -113,23 +113,54 @@ export async function POST(req: Request) {
       triggerWord
     });
 
-    // Prepare RunPod generation request
+    // Check if we have a dedicated inference endpoint
+    const inferenceEndpoint = process.env.RUNPOD_INFERENCE_ENDPOINT;
+
+    if (!inferenceEndpoint) {
+      return NextResponse.json({
+        error: 'RunPod inference endpoint not configured',
+        message: 'Please set up a RunPod inference endpoint for generation',
+        details: 'Training works, but generation requires a separate inference endpoint'
+      }, { status: 503 });
+    }
+
+    // Get the actual model URL from RunPod training results
+    const modelUrlResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/runpod/model-url?modelId=${modelId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.RUNPOD_API_KEY}`
+      }
+    });
+
+    if (!modelUrlResponse.ok) {
+      const errorData = await modelUrlResponse.json().catch(() => ({}));
+      return NextResponse.json({
+        error: 'Model not ready for generation',
+        details: errorData.error || 'Could not retrieve model URL',
+        message: 'Please wait for training to complete or try again later'
+      }, { status: 503 });
+    }
+
+    const modelData = await modelUrlResponse.json();
+
+    // Prepare FLUX kontext inference request
     const runpodPayload = {
       input: {
-        model_id: customerModel.modelId, // The RunPod training ID
         prompt: finalPrompt,
-        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured",
-        num_outputs: numOutputs,
+        lora_url: modelData.modelUrl, // Your trained LoRA model
+        lora_scale: 0.8, // LoRA strength (0.6-1.0 for good face likeness)
         width: 1024,
         height: 1024,
-        guidance_scale: 7.5,
-        num_inference_steps: 25,
-        scheduler: "DPMSolverMultistep"
+        num_outputs: numOutputs,
+        guidance_scale: 3.5, // FLUX works better with lower guidance
+        num_inference_steps: 28, // Good balance of quality/speed
+        seed: -1, // Random seed
+        output_format: "webp",
+        output_quality: 90
       }
     };
 
-    // Send request to RunPod generation endpoint
-    const runpodEndpoint = process.env.RUNPOD_GENERATION_ENDPOINT || process.env.RUNPOD_TRAINING_ENDPOINT;
+    // Send request to RunPod inference endpoint
+    const runpodEndpoint = inferenceEndpoint;
 
     if (!runpodEndpoint || !process.env.RUNPOD_API_KEY) {
       return NextResponse.json({
