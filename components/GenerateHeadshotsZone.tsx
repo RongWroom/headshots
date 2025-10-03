@@ -66,6 +66,10 @@ export default function GenerateHeadshotsZone({ modelId, modelName }: GenerateHe
 
       const result = await response.json();
 
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
       if (result.success) {
         setGenerationResult(result);
         toast({
@@ -77,6 +81,7 @@ export default function GenerateHeadshotsZone({ modelId, modelName }: GenerateHe
       }
 
     } catch (error) {
+      console.error('Generation error:', error);
       toast({
         title: "Generation failed",
         description: error instanceof Error ? error.message : "Unknown error occurred",

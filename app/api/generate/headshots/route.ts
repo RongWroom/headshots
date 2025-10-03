@@ -1,13 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { Logger } from '@/lib/logger';
+import { createSimpleFluxWorkflow } from '@/lib/comfyui-workflows';
 
 export const dynamic = "force-dynamic";
 
 const logger = new Logger('GENERATE_HEADSHOTS_API');
 
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    endpoint: 'generate/headshots',
+    timestamp: new Date().toISOString()
+  });
+}
+
 export async function POST(req: Request) {
   try {
+    logger.logInfo('API_REQUEST_START', 'Starting headshots generation request');
+
+    // Validate environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      logger.logError('ENV_MISSING', 'Missing Supabase environment variables');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     // Create Supabase client
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +52,15 @@ export async function POST(req: Request) {
     logger.setUserId(userId);
 
     // Parse request
-    const { modelId, prompt, packSlug, numOutputs = 4 } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      logger.logError('REQUEST_PARSE_FAILED', parseError);
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const { modelId, prompt, packSlug, numOutputs = 4 } = requestBody;
 
     if (!modelId || !prompt) {
       return NextResponse.json({
@@ -131,8 +156,6 @@ export async function POST(req: Request) {
     });
 
     // Use ComfyUI workflow for FLUX generation
-    const { createSimpleFluxWorkflow } = await import('@/lib/comfyui-workflows');
-    
     const workflow = createSimpleFluxWorkflow(
       finalPrompt,
       1024, // width
@@ -152,10 +175,16 @@ export async function POST(req: Request) {
     const runpodEndpoint = inferenceEndpoint;
 
     if (!runpodEndpoint || !process.env.RUNPOD_API_KEY) {
+      logger.logError('RUNPOD_CONFIG_MISSING', 'RunPod endpoint or API key not configured');
       return NextResponse.json({
         error: 'RunPod generation service not configured'
       }, { status: 500 });
     }
+
+    logger.logInfo('SENDING_RUNPOD_REQUEST', {
+      endpoint: runpodEndpoint,
+      workflowKeys: Object.keys(workflow)
+    });
 
     const response = await fetch(runpodEndpoint, {
       method: 'POST',
