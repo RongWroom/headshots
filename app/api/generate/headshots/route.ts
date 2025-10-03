@@ -105,7 +105,7 @@ export async function POST(req: Request) {
 
     // Build enhanced prompt for FLUX.1 Dev (generic for now)
     // Note: Not using trigger word since we're testing with generic FLUX
-    const finalPrompt = `${packStyle}, ${prompt}, professional photography studio lighting, high resolution, sharp focus, detailed facial features, commercial quality headshot`;
+    const finalPrompt = `${packStyle}, ${prompt}, professional photography studio lighting, high resolution, sharp focus, detailed facial features, commercial quality headshot, realistic skin texture, natural lighting, photorealistic, clean shaven, bald head`;
 
     logger.logInfo('USING_RUNPOD_GENERATION', {
       modelId: customerModel.modelId,
@@ -130,17 +130,21 @@ export async function POST(req: Request) {
       note: 'Using generic FLUX.1 Dev for testing - personalization coming later'
     });
 
-    // Prepare FLUX.1 Dev inference request (text-to-image)
+    // Prepare ComfyUI workflow for FLUX generation
+    const { createSimpleFluxWorkflow } = await import('@/lib/comfyui-workflows');
+    
+    const workflow = createSimpleFluxWorkflow(
+      finalPrompt,
+      1024, // width
+      1024, // height
+      28,   // steps
+      5.0,  // guidance
+      -1    // seed (random)
+    );
+
     const runpodPayload = {
       input: {
-        prompt: finalPrompt,
-        width: 1024,
-        height: 1024,
-        num_inference_steps: 28,
-        guidance: 5.0, // Good for portraits
-        seed: -1, // Random seed
-        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured, multiple people, crowd",
-        image_format: "webp"
+        workflow: workflow
       }
     };
 
@@ -190,8 +194,7 @@ export async function POST(req: Request) {
         status: 'processing',
         style: packSlug || 'corporate-headshots',
         poses: [prompt],
-        runpod_job_id: generationResult.id,
-        model_id: modelId
+        runpod_job_id: generationResult.id
       })
       .select()
       .single();
