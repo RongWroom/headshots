@@ -109,8 +109,7 @@ export async function POST(req: Request) {
 
     logger.logInfo('USING_RUNPOD_GENERATION', {
       modelId: customerModel.modelId,
-      finalPrompt,
-      triggerWord
+      finalPrompt
     });
 
     // Check if we have a dedicated inference endpoint
