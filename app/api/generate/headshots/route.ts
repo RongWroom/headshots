@@ -130,7 +130,7 @@ export async function POST(req: Request) {
       note: 'Using generic FLUX.1 Dev for testing - personalization coming later'
     });
 
-    // Prepare ComfyUI workflow for FLUX generation
+    // Use ComfyUI workflow for FLUX generation
     const { createSimpleFluxWorkflow } = await import('@/lib/comfyui-workflows');
     
     const workflow = createSimpleFluxWorkflow(

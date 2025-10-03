@@ -26,7 +26,7 @@ export function createFluxLoRAWorkflow(
     // Load FLUX.1 Dev model
     "4": {
       "inputs": {
-        "ckpt_name": "flux1-dev.safetensors"
+        "ckpt_name": "flux1-dev-fp8.safetensors"
       },
       "class_type": "CheckpointLoaderSimple",
       "_meta": {
