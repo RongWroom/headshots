@@ -62,18 +62,20 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // Pack-specific style modifiers
-    const packStyles = {
-      'actor-headshots': 'professional actor headshot, dramatic lighting, cinematic, high detail',
-      'corporate-headshots': 'professional corporate headshot, clean background, business attire, professional lighting',
-      'creative-headshots': 'creative professional headshot, artistic lighting, modern style'
-    };
-
-    const packStyle = packStyles[packSlug as keyof typeof packStyles] || packStyles['corporate-headshots'];
+    // Use the correct trigger word for dandan-actor model
+    const triggerWord = 'ACTOR';
     
-    // Build prompt with trigger word
-    const triggerWord = customerModel.name ? `sks${customerModel.name.substring(0, 6)}` : 'sks';
-    const finalPrompt = `${packStyle} of ${triggerWord}, ${prompt}, professional photography, high quality, detailed`;
+    // Build detailed prompt based on your successful manual prompt
+    const basePrompt = `A professional headshot portrait of an ${triggerWord} in dandan style. The subject is centered with a dead pan expression, wearing a simple outfit, body angled 45 degrees away from camera. The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere. The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows. The overall mood is serious and contemplative, emphasizing the subject's presence and character. High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
+    
+    // Pack-specific variations
+    const packVariations = {
+      'actor-headshots': basePrompt,
+      'corporate-headshots': basePrompt.replace('dead pan expression', 'professional confident expression').replace('simple outfit', 'business attire'),
+      'creative-headshots': basePrompt.replace('dead pan expression', 'artistic expression').replace('simple outfit', 'creative styling')
+    };
+    
+    const finalPrompt = packVariations[packSlug as keyof typeof packVariations] || packVariations['actor-headshots'];
 
     logger.logInfo('REPLICATE_GENERATION_START', {
       modelName: customerModel.name,
@@ -81,20 +83,27 @@ export async function POST(req: Request) {
       finalPrompt
     });
 
-    // Use the configured Replicate model
+    // Use the dandan-actor model specifically
     const replicateModel = process.env.REPLICATE_STYLE_LORA_MODEL_ID || 'rongwroom/dandan-actor:11162aefee0b704c352db825e03883e73c6ee053edc8f85af81d7da62d4aa27b';
+    
+    logger.logInfo('USING_DANDAN_ACTOR_MODEL', {
+      model: replicateModel,
+      triggerWord,
+      promptLength: finalPrompt.length
+    });
 
     const replicatePayload = {
       version: replicateModel.split(':')[1],
       input: {
         prompt: finalPrompt,
-        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured, multiple people, crowd",
+        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured, multiple people, crowd, cartoon, anime, painting, drawing, illustration, digital art",
         width: 1024,
         height: 1024,
         num_outputs: numOutputs,
-        guidance_scale: 7.5,
-        num_inference_steps: 25,
-        scheduler: "DPMSolverMultistep"
+        guidance_scale: 8.0,  // Slightly higher for better adherence to prompt
+        num_inference_steps: 30,  // More steps for better quality
+        scheduler: "DPMSolverMultistep",
+        seed: Math.floor(Math.random() * 1000000)  // Random seed for variety
       }
     };
 
