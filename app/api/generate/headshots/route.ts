@@ -84,35 +84,61 @@ export async function POST(req: Request) {
 
     const { modelId, prompt, packSlug, numOutputs = 4 } = requestBody;
 
+    // Enhanced validation with type checking
+    logger.logInfo('REQUEST_VALIDATION', {
+      modelId,
+      modelIdType: typeof modelId,
+      prompt,
+      promptType: typeof prompt,
+      packSlug,
+      numOutputs,
+      fullRequestBody: requestBody
+    });
+
     if (!modelId || !prompt) {
       logger.logError('MISSING_REQUIRED_FIELDS', { modelId, prompt });
       return NextResponse.json({
         error: 'Missing required fields: modelId and prompt',
-        received: { modelId, prompt, packSlug, numOutputs }
+        received: { modelId, prompt, packSlug, numOutputs },
+        types: {
+          modelId: typeof modelId,
+          prompt: typeof prompt
+        }
+      }, { status: 400 });
+    }
+
+    // Convert modelId to number if it's a string
+    const numericModelId = typeof modelId === 'string' ? parseInt(modelId, 10) : modelId;
+    if (isNaN(numericModelId)) {
+      logger.logError('INVALID_MODEL_ID', { modelId, numericModelId });
+      return NextResponse.json({
+        error: 'Invalid model ID format',
+        received: { modelId, type: typeof modelId }
       }, { status: 400 });
     }
 
     logger.logInfo('GENERATION_REQUEST_START', {
-      modelId,
+      modelId: numericModelId,
+      originalModelId: modelId,
       prompt,
       packSlug,
       numOutputs
     });
 
     // Get the customer's trained model
-    logger.logInfo('LOOKING_FOR_MODEL', { modelId, userId });
+    logger.logInfo('LOOKING_FOR_MODEL', { modelId: numericModelId, userId });
 
     const { data: customerModel, error: modelError } = await supabase
       .from('models')
       .select('*')
-      .eq('id', modelId)
+      .eq('id', numericModelId)
       .eq('user_id', userId)
       .single();
 
     if (modelError || !customerModel) {
       logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', {
         error: modelError,
-        modelId,
+        modelId: numericModelId,
         userId
       });
 
@@ -120,12 +146,12 @@ export async function POST(req: Request) {
       const { data: anyModel, error: anyError } = await supabase
         .from('models')
         .select('id, name, user_id, status')
-        .eq('id', modelId)
+        .eq('id', numericModelId)
         .single();
 
       if (anyModel) {
         logger.logWarning('MODEL_BELONGS_TO_DIFFERENT_USER', 'Model exists but belongs to different user', {
-          modelId,
+          modelId: numericModelId,
           requestedUserId: userId,
           actualUserId: anyModel.user_id,
           modelName: anyModel.name
@@ -136,7 +162,8 @@ export async function POST(req: Request) {
         error: 'Model not found or access denied',
         details: modelError?.message || 'Model not found',
         debug: {
-          modelId,
+          modelId: numericModelId,
+          originalModelId: modelId,
           userId,
           modelExists: !!anyModel,
           actualOwner: anyModel?.user_id
