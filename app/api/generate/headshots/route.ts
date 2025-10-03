@@ -104,45 +104,96 @@ export async function POST(req: Request) {
     });
 
     // Use RunPod for generation with the customer's trained model
+    const triggerWord = `sks${customerModel.name?.substring(0, 6) || 'user'}`;
+    const finalPrompt = `${packStyle} of ${triggerWord}, ${prompt}, professional photography, high quality, detailed`;
+
     logger.logInfo('USING_RUNPOD_GENERATION', {
       modelId: customerModel.modelId,
-      enhancedPrompt
+      finalPrompt,
+      triggerWord
     });
 
-    // Forward to RunPod generation endpoint
-    const runpodGenerationResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/runpod/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': req.headers.get('cookie') || ''
-      },
-      body: JSON.stringify({
-        modelId,
-        prompt,
-        packSlug,
-        numOutputs
-      })
-    });
+    // Prepare RunPod generation request
+    const runpodPayload = {
+      input: {
+        model_id: customerModel.modelId, // The RunPod training ID
+        prompt: finalPrompt,
+        negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured",
+        num_outputs: numOutputs,
+        width: 1024,
+        height: 1024,
+        guidance_scale: 7.5,
+        num_inference_steps: 25,
+        scheduler: "DPMSolverMultistep"
+      }
+    };
 
-    if (!runpodGenerationResponse.ok) {
-      const errorData = await runpodGenerationResponse.json().catch(() => ({}));
-      logger.logError('RUNPOD_GENERATION_FAILED', errorData.error || 'Generation failed');
+    // Send request to RunPod generation endpoint
+    const runpodEndpoint = process.env.RUNPOD_GENERATION_ENDPOINT || process.env.RUNPOD_TRAINING_ENDPOINT;
 
+    if (!runpodEndpoint || !process.env.RUNPOD_API_KEY) {
       return NextResponse.json({
-        error: errorData.error || 'Generation failed',
-        details: errorData.details
-      }, { status: runpodGenerationResponse.status });
+        error: 'RunPod generation service not configured'
+      }, { status: 500 });
     }
 
-    const generationResult = await runpodGenerationResponse.json();
+    const response = await fetch(runpodEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RUNPOD_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(runpodPayload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      logger.logError('RUNPOD_GENERATION_FAILED', `HTTP ${response.status}`, {
+        error: errorData,
+        status: response.status
+      });
+
+      return NextResponse.json({
+        error: 'Generation request failed',
+        details: errorData.error || `HTTP ${response.status}`
+      }, { status: 500 });
+    }
+
+    const generationResult = await response.json();
 
     logger.logSuccess('GENERATION_COMPLETED', {
-      generationId: generationResult.generationId,
+      generationId: generationResult.id,
       status: generationResult.status
     });
 
-    // Return the result from RunPod generation
-    return NextResponse.json(generationResult);
+    // Store generation job in database
+    const { data: generationJob, error: jobError } = await supabase
+      .from('generation_jobs')
+      .insert({
+        user_id: userId,
+        status: 'processing',
+        style: packSlug || 'corporate-headshots',
+        poses: [prompt],
+        runpod_job_id: generationResult.id,
+        model_id: modelId
+      })
+      .select()
+      .single();
+
+    if (jobError) {
+      logger.logWarning('GENERATION_JOB_SAVE_FAILED', jobError.message || 'Failed to save generation job', { error: jobError });
+    }
+
+    return NextResponse.json({
+      success: true,
+      generationId: generationResult.id,
+      status: generationResult.status,
+      jobId: generationJob?.id,
+      enhancedPrompt: finalPrompt,
+      message: 'Generating personalized headshots with your trained model',
+      estimatedTime: '1-2 minutes',
+      triggerWord
+    });
 
   } catch (error) {
     logger.logError('GENERATION_REQUEST_ERROR', error);
