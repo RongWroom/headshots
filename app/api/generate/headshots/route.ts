@@ -44,12 +44,12 @@ export async function POST(req: Request) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
-      logger.logError('AUTH_FAILED', error || 'No user found', { 
+      logger.logError('AUTH_FAILED', error || 'No user found', {
         error: error?.message,
         hasAuthHeader: !!req.headers.get('authorization'),
         hasCookieHeader: !!req.headers.get('cookie')
       });
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Unauthorized',
         details: 'User authentication failed',
         debug: {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     let requestBody;
     try {
       requestBody = await req.json();
-      logger.logInfo('REQUEST_PARSED', { 
+      logger.logInfo('REQUEST_PARSED', {
         hasModelId: !!requestBody.modelId,
         hasPrompt: !!requestBody.prompt,
         packSlug: requestBody.packSlug,
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       });
     } catch (parseError) {
       logger.logError('REQUEST_PARSE_FAILED', parseError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Invalid request body',
         details: 'Request body must be valid JSON'
       }, { status: 400 });
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
     // Get the customer's trained model
     logger.logInfo('LOOKING_FOR_MODEL', { modelId, userId });
-    
+
     const { data: customerModel, error: modelError } = await supabase
       .from('models')
       .select('*')
@@ -110,28 +110,28 @@ export async function POST(req: Request) {
       .single();
 
     if (modelError || !customerModel) {
-      logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', { 
+      logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', {
         error: modelError,
         modelId,
         userId
       });
-      
+
       // Check if model exists but belongs to different user
       const { data: anyModel, error: anyError } = await supabase
         .from('models')
         .select('id, name, user_id, status')
         .eq('id', modelId)
         .single();
-      
+
       if (anyModel) {
-        logger.logWarning('MODEL_BELONGS_TO_DIFFERENT_USER', {
+        logger.logWarning('MODEL_BELONGS_TO_DIFFERENT_USER', 'Model exists but belongs to different user', {
           modelId,
           requestedUserId: userId,
           actualUserId: anyModel.user_id,
           modelName: anyModel.name
         });
       }
-      
+
       return NextResponse.json({
         error: 'Model not found or access denied',
         details: modelError?.message || 'Model not found',
