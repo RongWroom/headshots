@@ -44,27 +44,51 @@ export async function POST(req: Request) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
-      logger.logError('AUTH_FAILED', error || 'No user found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      logger.logError('AUTH_FAILED', error || 'No user found', { 
+        error: error?.message,
+        hasAuthHeader: !!req.headers.get('authorization'),
+        hasCookieHeader: !!req.headers.get('cookie')
+      });
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'User authentication failed',
+        debug: {
+          hasAuthHeader: !!req.headers.get('authorization'),
+          hasCookieHeader: !!req.headers.get('cookie'),
+          errorMessage: error?.message
+        }
+      }, { status: 401 });
     }
 
     const userId = user.id;
     logger.setUserId(userId);
+    logger.logInfo('USER_AUTHENTICATED', { userId });
 
     // Parse request
     let requestBody;
     try {
       requestBody = await req.json();
+      logger.logInfo('REQUEST_PARSED', { 
+        hasModelId: !!requestBody.modelId,
+        hasPrompt: !!requestBody.prompt,
+        packSlug: requestBody.packSlug,
+        numOutputs: requestBody.numOutputs
+      });
     } catch (parseError) {
       logger.logError('REQUEST_PARSE_FAILED', parseError);
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Invalid request body',
+        details: 'Request body must be valid JSON'
+      }, { status: 400 });
     }
 
     const { modelId, prompt, packSlug, numOutputs = 4 } = requestBody;
 
     if (!modelId || !prompt) {
+      logger.logError('MISSING_REQUIRED_FIELDS', { modelId, prompt });
       return NextResponse.json({
-        error: 'Missing required fields: modelId and prompt'
+        error: 'Missing required fields: modelId and prompt',
+        received: { modelId, prompt, packSlug, numOutputs }
       }, { status: 400 });
     }
 
@@ -76,6 +100,8 @@ export async function POST(req: Request) {
     });
 
     // Get the customer's trained model
+    logger.logInfo('LOOKING_FOR_MODEL', { modelId, userId });
+    
     const { data: customerModel, error: modelError } = await supabase
       .from('models')
       .select('*')
@@ -84,11 +110,46 @@ export async function POST(req: Request) {
       .single();
 
     if (modelError || !customerModel) {
-      logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', { error: modelError });
+      logger.logError('MODEL_NOT_FOUND', modelError?.message || 'Model not found', { 
+        error: modelError,
+        modelId,
+        userId
+      });
+      
+      // Check if model exists but belongs to different user
+      const { data: anyModel, error: anyError } = await supabase
+        .from('models')
+        .select('id, name, user_id, status')
+        .eq('id', modelId)
+        .single();
+      
+      if (anyModel) {
+        logger.logWarning('MODEL_BELONGS_TO_DIFFERENT_USER', {
+          modelId,
+          requestedUserId: userId,
+          actualUserId: anyModel.user_id,
+          modelName: anyModel.name
+        });
+      }
+      
       return NextResponse.json({
-        error: 'Model not found or access denied'
+        error: 'Model not found or access denied',
+        details: modelError?.message || 'Model not found',
+        debug: {
+          modelId,
+          userId,
+          modelExists: !!anyModel,
+          actualOwner: anyModel?.user_id
+        }
       }, { status: 404 });
     }
+
+    logger.logInfo('MODEL_FOUND', {
+      modelId: customerModel.id,
+      modelName: customerModel.name,
+      modelStatus: customerModel.status,
+      modelType: customerModel.type
+    });
 
     // Get the photographer's base style model (your DanDan style)
     const { data: styleModel, error: styleError } = await supabase
