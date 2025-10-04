@@ -51,7 +51,7 @@ export default function GenerateHeadshotsZone({ modelId, modelName }: GenerateHe
     setIsGenerating(true);
     
     try {
-      const response = await fetch('/api/replicate/predictions', {
+      const response = await fetch('/api/replicate/generate-styled', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
