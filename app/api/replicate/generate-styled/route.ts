@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     const styleTrigger = 'ACTOR';
     const stylePrompt = `A professional headshot portrait of an ${styleTrigger} in dandan style. The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
-    // Use your dandan-actor model for style transfer
+    // Use your dandan-actor model for style transfer with correct parameters
     const styleResponse = await fetch('https://api.replicate.com/v1/models/rongwroom/dandan-actor/predictions', {
       method: 'POST',
       headers: {
@@ -155,12 +155,21 @@ export async function POST(req: Request) {
         input: {
           prompt: stylePrompt,
           image: seedreamOutput[0], // Use first Seedream output as base
-          prompt_strength: 0.8, // Keep face, apply style
-          guidance_scale: 7.5,
+          prompt_strength: 0.8,
+          aspect_ratio: "custom",
+          width: 540,
+          height: 720,
+          guidance_scale: 1.5,
           num_inference_steps: 30,
           num_outputs: numOutputs,
           output_format: "jpg",
-          output_quality: 100
+          output_quality: 100,
+          go_fast: false,
+          megapixels: "1",
+          model: "dev",
+          lora_scale: 1,
+          extra_lora_scale: 1,
+          replicate_weights: "https://replicate.delivery/xezq/6PAYweu7FiWbUaLfpGX3Y0vPIex3Kr6SN2uMccFTe7Lem1fJF/trained_model.tar"
         }
       })
     });
