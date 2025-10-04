@@ -36,6 +36,9 @@ export default function GenerateHeadshotsZone({ modelId, modelName }: GenerateHe
   const [customPrompt, setCustomPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState<any>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
+  const [finalImages, setFinalImages] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
