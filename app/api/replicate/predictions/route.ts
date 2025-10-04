@@ -71,7 +71,19 @@ export async function POST(req: Request) {
     // Build prompt with photography style trigger
     const styleTrigger = 'ACTOR'; // Photography style
 
-    const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is a bald man with a shaved head, centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, clean shaved head, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
+    // Define pose variations for variety
+    const poseVariations = [
+      'looking directly at the camera with a professional serious expression, confident and contemplative',
+      'looking directly at the camera with a subtle warm smile, approachable and friendly',
+      'looking directly at the camera with a slight smile, professional yet personable',
+      'looking directly at the camera with a neutral expression, calm and composed',
+      'looking directly at the camera with a confident expression, strong and professional'
+    ];
+
+    // Randomly select a pose variation for variety
+    const selectedPose = poseVariations[Math.floor(Math.random() * poseVariations.length)];
+
+    const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is ${selectedPose}, making direct eye contact with the viewer, centered, wearing a simple outfit, body angled 45 degrees away from camera but face turned toward camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, direct gaze at camera, relaxed portrait photography capturing photorealistic skin textures, sharp eyes looking at camera, natural hair color, and subtle shadows, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
     // Use Seedream 4.0 via Replicate API with your exact working settings
     const response = await fetch('https://api.replicate.com/v1/models/bytedance/seedream-4/predictions', {
