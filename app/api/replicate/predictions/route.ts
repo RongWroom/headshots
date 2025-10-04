@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     
     const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is a bald man with a shaved head, centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, clean shaved head, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
-    // Use Seedream 4.0 via Replicate API
+    // Use Seedream 4.0 via Replicate API with your exact working settings
     const response = await fetch('https://api.replicate.com/v1/models/bytedance/seedream-4/predictions', {
       method: 'POST',
       headers: {
@@ -69,8 +69,13 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         input: {
           prompt: finalPrompt,
-          aspect_ratio: "4:3",
-          num_outputs: numOutputs
+          image_input: [userFaceImage], // THIS IS THE KEY - your face image
+          size: "2K",
+          width: 1728,
+          height: 2304,
+          aspect_ratio: "3:4",
+          max_images: numOutputs,
+          sequential_image_generation: "disabled"
         }
       })
     });
