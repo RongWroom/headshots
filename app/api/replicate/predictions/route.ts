@@ -48,16 +48,19 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // Use user's face model (daniel-spencer) as base
-    const faceModel = 'rongwroom/daniel-spencer:9a871ed08348f254bb5597dd94d73916c67f183cdef1c275b2686af607bbb363';
+    // Use Seedream 4.0 for superior face consistency
+    const seedreamModel = 'bytedance/seedream-4';
     
-    // Build prompt with correct trigger words
-    const faceTrigger = 'sksdani'; // User's face
+    // For now, use a placeholder - user will need to provide a reference image
+    // In production, this should come from their uploaded training images
+    const userFaceImage = requestBody.referenceImage || "https://replicate.delivery/pbxt/placeholder.jpg";
+    
+    // Build prompt with photography style trigger
     const styleTrigger = 'ACTOR'; // Photography style
     
-    const finalPrompt = `A professional headshot portrait of ${faceTrigger}, a male ${styleTrigger}. The subject is a man centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
+    const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is a bald man with a shaved head, centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, clean shaved head, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
-    // Use Replicate with all your working settings
+    // Use Seedream with your face image + photography style LoRA
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -65,24 +68,20 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        version: faceModel.split(':')[1],
+        model: seedreamModel,
         input: {
           prompt: finalPrompt,
-          aspect_ratio: "custom",
+          image: userFaceImage, // User's face for consistency
           width: 540,
           height: 720,
           num_outputs: numOutputs,
-          guidance_scale: 1.5,
+          guidance_scale: 7.5,
           num_inference_steps: 30,
           output_format: "jpg",
           output_quality: 100,
-          go_fast: false,
-          megapixels: "1",
-          model: "dev",
-          lora_scale: 1,
-          // Add your photography style as extra LoRA
-          extra_lora: "https://replicate.delivery/xezq/6PAYweu7FiWbUaLfpGX3Y0vPIex3Kr6SN2uMccFTe7Lem1fJF/trained_model.tar",
-          extra_lora_scale: 1
+          // Add your photography style as LoRA
+          lora_url: "https://replicate.delivery/xezq/6PAYweu7FiWbUaLfpGX3Y0vPIex3Kr6SN2uMccFTe7Lem1fJF/trained_model.tar",
+          lora_scale: 0.8
         }
       })
     });
