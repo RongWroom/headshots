@@ -71,13 +71,12 @@ export async function POST(req: Request) {
     // Build prompt with photography style trigger
     const styleTrigger = 'ACTOR'; // Photography style
 
-    // Define pose variations for variety
+    // Define pose variations for variety (no smiling - keeps it professional)
     const poseVariations = [
       'looking directly at the camera with a professional serious expression, confident and contemplative',
-      'looking directly at the camera with a subtle warm smile, approachable and friendly',
-      'looking directly at the camera with a slight smile, professional yet personable',
       'looking directly at the camera with a neutral expression, calm and composed',
-      'looking directly at the camera with a confident expression, strong and professional'
+      'looking directly at the camera with a confident expression, strong and professional',
+      'looking directly at the camera with a dead pan expression, serious and contemplative'
     ];
 
     // Randomly select a pose variation for variety
@@ -101,7 +100,8 @@ export async function POST(req: Request) {
           height: 2304,
           aspect_ratio: "3:4",
           max_images: numOutputs,
-          sequential_image_generation: "disabled"
+          sequential_image_generation: "disabled",
+          prompt_strength: 0.85 // Higher = more prompt influence, less image copying (0.5-1.0)
         }
       })
     });
