@@ -161,8 +161,7 @@ export async function POST(req: Request) {
         status: 'processing',
         style: packSlug || 'corporate-headshots',
         poses: [prompt],
-        runpod_job_id: generationResult.id,
-        model_id: modelId
+        runpod_job_id: generationResult.id
       })
       .select()
       .single();
