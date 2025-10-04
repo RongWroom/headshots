@@ -48,15 +48,14 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // For now, use the style model with a personalized trigger word
-    // TODO: Once we have user's trained models stored, use those instead
-    const replicateModel = process.env.REPLICATE_STYLE_LORA_MODEL_ID || 'rongwroom/dandan-actor:11162aefee0b704c352db825e03883e73c6ee053edc8f85af81d7da62d4aa27b';
+    // Use user's face model (daniel-spencer) as base
+    const faceModel = 'rongwroom/daniel-spencer:9a871ed08348f254bb5597dd94d73916c67f183cdef1c275b2686af607bbb363';
     
-    // Use a personalized trigger word based on the user's model name
-    const triggerWord = `sks${customerModel.name?.substring(0, 6) || 'user'}`;
-    
-    const finalPrompt = `A professional headshot portrait of ${triggerWord} in dandan style. The subject is centered with a professional expression, wearing business attire, body angled 45 degrees away from camera. The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere. The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows. The overall mood is serious and contemplative, emphasizing the subject's presence and character. High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8. ${prompt}`;
+    // Build prompt with user's face trigger word
+    const triggerWord = 'sksdani';
+    const finalPrompt = `A professional headshot portrait of ${triggerWord} in dandan style. The subject is centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
+    // Use Replicate's run endpoint to combine both models
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -64,16 +63,19 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        version: replicateModel.split(':')[1],
+        version: faceModel.split(':')[1],
         input: {
           prompt: finalPrompt,
-          negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured, multiple people, crowd, cartoon, anime, painting, drawing, illustration, digital art",
           width: 1024,
           height: 1024,
           num_outputs: numOutputs,
-          guidance_scale: 8.0,
+          guidance_scale: 7.5,
           num_inference_steps: 30,
-          scheduler: "DPMSolverMultistep"
+          output_format: "jpg",
+          output_quality: 90,
+          // Add your photography style as extra LoRA
+          extra_lora: "https://replicate.delivery/xezq/6PAYweu7FiWbUaLfpGX3Y0vPIex3Kr6SN2uMccFTe7Lem1fJF/trained_model.tar",
+          extra_lora_scale: 0.8
         }
       })
     });
