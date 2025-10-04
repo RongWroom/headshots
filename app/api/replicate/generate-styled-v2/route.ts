@@ -57,12 +57,12 @@ export async function POST(req: Request) {
       'confident expression, strong and professional',
       'dead pan expression, serious and contemplative'
     ];
-    
+
     const selectedPose = poseVariations[Math.floor(Math.random() * poseVariations.length)];
 
     // Step 1: Apply photography style using img2img (preserves gender/ethnicity)
     console.log('Step 1: Applying DanDan photography style via img2img...');
-    
+
     const styleTrigger = 'ACTOR';
     const stylePrompt = `A professional headshot portrait of an ${styleTrigger} in dandan style. The subject is centered with a ${selectedPose}, looking directly at the camera, making eye contact with the viewer, wearing a simple outfit, body angled 45 degrees away from camera but face turned toward camera, The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, relaxed portrait photography capturing photorealistic skin textures, sharp eyes looking at camera, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         input: {
           image: referenceImages[0], // Start from user's reference photo (preserves gender/ethnicity)
           prompt: stylePrompt,
-          prompt_strength: 0.5, // Balance between reference and style (0.5 = 50/50)
+          prompt_strength: 0.8, // Higher = more transformation, less original pose
           aspect_ratio: "custom",
           width: 540,
           height: 720,
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
 
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const statusResponse = await fetch(styleResult.urls.get, {
         headers: {
           'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       });
 
       const status = await statusResponse.json();
-      
+
       if (status.status === 'succeeded') {
         styledImage = status.output; // Array of images
         console.log('Style generation completed:', styledImage.length, 'images');
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
           details: status.error
         }, { status: 500 });
       }
-      
+
       attempts++;
     }
 
@@ -144,14 +144,14 @@ export async function POST(req: Request) {
 
     // Step 2: Face swap each styled image (optional - img2img already preserves face)
     console.log('Step 2: Optionally enhancing faces with face swap...');
-    
+
     const finalImages = [];
-    
+
     // Process each styled image
     for (let i = 0; i < styledImage.length; i++) {
       const currentImage = styledImage[i];
       console.log(`Processing image ${i + 1}/${styledImage.length}`);
-      
+
       // Try face swap to enhance facial features
       try {
         const faceSwapResponse = await fetch('https://api.replicate.com/v1/predictions', {
@@ -177,14 +177,14 @@ export async function POST(req: Request) {
         }
 
         const faceSwapResult = await faceSwapResponse.json();
-        
+
         // Poll for face swap completion
         let swappedImage = null;
         let swapAttempts = 0;
-        
+
         while (swapAttempts < 30) { // 30 seconds max per swap
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           const statusResponse = await fetch(faceSwapResult.urls.get, {
             headers: {
               'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
@@ -192,7 +192,7 @@ export async function POST(req: Request) {
           });
 
           const status = await statusResponse.json();
-          
+
           if (status.status === 'succeeded') {
             swappedImage = status.output;
             break;
@@ -200,10 +200,10 @@ export async function POST(req: Request) {
             swappedImage = currentImage; // Use styled version if swap fails
             break;
           }
-          
+
           swapAttempts++;
         }
-        
+
         finalImages.push(swappedImage || currentImage);
       } catch (error) {
         console.log(`Error processing image ${i + 1}:`, error);
