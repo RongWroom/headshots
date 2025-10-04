@@ -51,10 +51,7 @@ export async function POST(req: Request) {
     }
 
     // Use Seedream 4.0 for superior face consistency
-    const seedreamModel = 'bytedance/seedream-4';
-    
-    // For now, use a placeholder - user will need to provide a reference image
-    // In production, this should come from their uploaded training images
+    // Get the reference image from request or use placeholder
     const userFaceImage = referenceImage || "https://replicate.delivery/pbxt/placeholder.jpg";
     
     // Build prompt with photography style trigger
@@ -62,28 +59,18 @@ export async function POST(req: Request) {
     
     const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is a bald man with a shaved head, centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, clean shaved head, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
-    // Use Seedream with your face image + photography style LoRA
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
+    // Use Seedream 4.0 via Replicate API
+    const response = await fetch('https://api.replicate.com/v1/models/bytedance/seedream-4/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: seedreamModel,
         input: {
           prompt: finalPrompt,
-          image: userFaceImage, // User's face for consistency
-          width: 540,
-          height: 720,
-          num_outputs: numOutputs,
-          guidance_scale: 7.5,
-          num_inference_steps: 30,
-          output_format: "jpg",
-          output_quality: 100,
-          // Add your photography style as LoRA
-          lora_url: "https://replicate.delivery/xezq/6PAYweu7FiWbUaLfpGX3Y0vPIex3Kr6SN2uMccFTe7Lem1fJF/trained_model.tar",
-          lora_scale: 0.8
+          aspect_ratio: "4:3",
+          num_outputs: numOutputs
         }
       })
     });
