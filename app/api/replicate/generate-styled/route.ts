@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     const selectedPose = poseVariations[Math.floor(Math.random() * poseVariations.length)];
 
     // Step 1: Generate base headshot with Seedream
-    const seedreamPrompt = `A professional headshot portrait. The subject is ${selectedPose}, making direct eye contact with the viewer, centered, wearing a simple outfit, body angled 45 degrees away from camera but face turned toward camera, professional photography, high quality`;
+    const seedreamPrompt = `A professional headshot portrait. The subject is ${selectedPose}, making direct eye contact with the viewer, centered, wearing a simple outfit, body angled 45 degrees away from camera but face turned toward camera, The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, relaxed portrait photography capturing photorealistic skin textures, sharp eyes looking at camera, natural hair color, and subtle shadows, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
     console.log('Step 1: Starting Seedream generation...');
     
@@ -142,16 +142,17 @@ export async function POST(req: Request) {
     console.log('Step 2: Applying photography style...');
 
     const styleTrigger = 'ACTOR';
-    const stylePrompt = `A professional headshot portrait of an ${styleTrigger} in dandan style. The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
+    const stylePrompt = `A professional headshot portrait of an ${styleTrigger} in dandan style. The subject is centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
     // Use your dandan-actor model for style transfer with correct parameters
-    const styleResponse = await fetch('https://api.replicate.com/v1/models/rongwroom/dandan-actor/predictions', {
+    const styleResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        version: '11162aefee0b704c352db825e03883e73c6ee053edc8f85af81d7da62d4aa27b', // dandan-actor version
         input: {
           prompt: stylePrompt,
           image: seedreamOutput[0], // Use first Seedream output as base
