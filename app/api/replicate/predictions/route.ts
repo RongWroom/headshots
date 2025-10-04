@@ -48,12 +48,14 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // Use the DanDan actor style with ACTOR trigger word
-    const triggerWord = 'ACTOR';
-    const finalPrompt = `A professional headshot portrait of an ${triggerWord} in dandan style. The subject is centered with a professional expression, wearing business attire, body angled 45 degrees away from camera. The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere. The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows. The overall mood is serious and contemplative, emphasizing the subject's presence and character. High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8. ${prompt}`;
-
-    // Use Replicate API
+    // For now, use the style model with a personalized trigger word
+    // TODO: Once we have user's trained models stored, use those instead
     const replicateModel = process.env.REPLICATE_STYLE_LORA_MODEL_ID || 'rongwroom/dandan-actor:11162aefee0b704c352db825e03883e73c6ee053edc8f85af81d7da62d4aa27b';
+    
+    // Use a personalized trigger word based on the user's model name
+    const triggerWord = `sks${customerModel.name?.substring(0, 6) || 'user'}`;
+    
+    const finalPrompt = `A professional headshot portrait of ${triggerWord} in dandan style. The subject is centered with a professional expression, wearing business attire, body angled 45 degrees away from camera. The background is softly blurred with muted tones (brown, gray, green, or blue), creating a cinematic and sophisticated atmosphere. The lighting is soft and directional, highlighting the subject's facial features, detailed hair, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows. The overall mood is serious and contemplative, emphasizing the subject's presence and character. High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8. ${prompt}`;
 
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',

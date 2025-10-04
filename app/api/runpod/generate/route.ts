@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       packStyle
     });
 
-    // Prepare RunPod FLUX generation request
+    // Simple FLUX generation request (no LoRA for now, just test basic generation)
     const runpodPayload = {
       input: {
         prompt: enhancedPrompt,
@@ -100,11 +100,7 @@ export async function POST(req: Request) {
         height: 1024,
         num_outputs: numOutputs,
         guidance_scale: 7.5,
-        num_inference_steps: 25,
-        seed: Math.floor(Math.random() * 1000000),
-        // For LoRA support (your trained model)
-        lora_url: `https://your-model-storage/${customerModel.modelId}.safetensors`, // We'll need to figure out where your model is stored
-        lora_scale: 0.8
+        num_inference_steps: 25
       }
     };
 

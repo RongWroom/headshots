@@ -52,19 +52,31 @@ export async function POST(req: Request) {
 
     console.log(`Webhook received: ${eventType}`, trainingData);
 
-    // Here you would typically update your database with the training status
-    // For example:
-    // await db.training.update({
-    //   where: { trainingId: trainingData.id },
-    //   data: {
-    //     status: trainingData.status,
-    //     output: trainingData.output,
-    //     completedAt: trainingData.completed_at,
-    //   },
-    // });
+    // Update database when training completes
+    if (eventType === 'training.completed' && trainingData.status === 'succeeded') {
+      const { createClient } = require('@supabase/supabase-js');
+      
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
 
-    // You could also send an email notification here
-    // await sendTrainingCompleteEmail(trainingData);
+      // Find the model by Replicate training ID and update it
+      const { error: updateError } = await supabase
+        .from('models')
+        .update({
+          status: 'finished',
+          replicate_model_id: `${trainingData.output.model}`, // Store the trained model ID
+          replicate_version_id: trainingData.output.version
+        })
+        .eq('replicate_training_id', trainingData.id);
+
+      if (updateError) {
+        console.error('Error updating model:', updateError);
+      } else {
+        console.log('Model updated with trained model ID:', trainingData.output.model);
+      }
+    }
 
     return NextResponse.json({ received: true });
   } catch (error) {
