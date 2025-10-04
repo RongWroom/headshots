@@ -27,7 +27,9 @@ export async function POST(req: Request) {
     }
 
     // Parse request
-    const { modelId, prompt, packSlug, numOutputs = 4 } = await req.json();
+    const requestBody = await req.json();
+    const { modelId, prompt, packSlug, numOutputs = 4, referenceImage } = requestBody;
+    
     if (!modelId || !prompt) {
       return NextResponse.json({
         error: 'Missing required fields: modelId and prompt'
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     
     // For now, use a placeholder - user will need to provide a reference image
     // In production, this should come from their uploaded training images
-    const userFaceImage = requestBody.referenceImage || "https://replicate.delivery/pbxt/placeholder.jpg";
+    const userFaceImage = referenceImage || "https://replicate.delivery/pbxt/placeholder.jpg";
     
     // Build prompt with photography style trigger
     const styleTrigger = 'ACTOR'; // Photography style
