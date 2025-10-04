@@ -91,18 +91,20 @@ export async function POST(req: Request) {
       packStyle
     });
 
-    // Prepare RunPod generation request
+    // Prepare RunPod FLUX generation request
     const runpodPayload = {
       input: {
-        model_id: customerModel.modelId, // The RunPod training ID
         prompt: enhancedPrompt,
         negative_prompt: "blurry, low quality, distorted, bad anatomy, deformed, disfigured",
-        num_outputs: numOutputs,
         width: 1024,
         height: 1024,
+        num_outputs: numOutputs,
         guidance_scale: 7.5,
         num_inference_steps: 25,
-        scheduler: "DPMSolverMultistep"
+        seed: Math.floor(Math.random() * 1000000),
+        // For LoRA support (your trained model)
+        lora_url: `https://your-model-storage/${customerModel.modelId}.safetensors`, // We'll need to figure out where your model is stored
+        lora_scale: 0.8
       }
     };
 
@@ -112,12 +114,13 @@ export async function POST(req: Request) {
       numOutputs
     });
 
-    // Send request to RunPod generation endpoint
-    const runpodEndpoint = process.env.RUNPOD_GENERATION_ENDPOINT || process.env.RUNPOD_TRAINING_ENDPOINT;
+    // Send request to RunPod inference endpoint (separate from training)
+    const runpodEndpoint = process.env.RUNPOD_INFERENCE_ENDPOINT;
     
     if (!runpodEndpoint || !process.env.RUNPOD_API_KEY) {
       return NextResponse.json({ 
-        error: 'RunPod generation service not configured' 
+        error: 'RunPod inference endpoint not configured',
+        message: 'Please set up RUNPOD_INFERENCE_ENDPOINT environment variable'
       }, { status: 500 });
     }
 

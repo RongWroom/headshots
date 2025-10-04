@@ -186,7 +186,7 @@ export async function POST(req: Request) {
           userId,
           modelExists: !!anyModel,
           actualOwner: anyModel?.user_id
-        }
+        } 
       }, { status: 404 });
     }
 
