@@ -28,11 +28,26 @@ export async function POST(req: Request) {
 
     // Parse request
     const requestBody = await req.json();
-    const { modelId, prompt, packSlug, numOutputs = 4, referenceImage } = requestBody;
-    
+    const { modelId, prompt, packSlug, numOutputs = 4, referenceImages } = requestBody;
+
     if (!modelId || !prompt) {
       return NextResponse.json({
         error: 'Missing required fields: modelId and prompt'
+      }, { status: 400 });
+    }
+
+    // Validate reference images (Seedream supports up to 10)
+    if (!referenceImages || !Array.isArray(referenceImages) || referenceImages.length === 0) {
+      return NextResponse.json({
+        error: 'At least one reference image is required',
+        hint: 'Pass referenceImages as an array of image URLs'
+      }, { status: 400 });
+    }
+
+    if (referenceImages.length > 10) {
+      return NextResponse.json({
+        error: 'Maximum 10 reference images allowed',
+        received: referenceImages.length
       }, { status: 400 });
     }
 
@@ -50,13 +65,12 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // Use Seedream 4.0 for superior face consistency
-    // Get the reference image from request or use placeholder
-    const userFaceImage = referenceImage || "https://replicate.delivery/pbxt/placeholder.jpg";
-    
+    // Use Seedream 4.0 for superior face consistency with multiple reference images
+    const userFaceImages = referenceImages;
+
     // Build prompt with photography style trigger
     const styleTrigger = 'ACTOR'; // Photography style
-    
+
     const finalPrompt = `A professional headshot portrait of a ${styleTrigger}. The subject is a bald man with a shaved head, centered with a professional expression, wearing a simple outfit, body angled 45 degrees away from camera, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, clean shaved head, relaxed portrait photography capturing photorealistic skin textures, sharp eyes, natural hair color, and subtle shadows, The overall mood is serious and contemplative, emphasizing the subject's presence and character, High-quality photography, cinematic lighting, shallow depth of field, Canon R6, Canon 70-200mm F2.8`;
 
     // Use Seedream 4.0 via Replicate API with your exact working settings
@@ -69,7 +83,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         input: {
           prompt: finalPrompt,
-          image_input: [userFaceImage], // THIS IS THE KEY - your face image
+          image_input: userFaceImages, // Multiple face images for better consistency
           size: "2K",
           width: 1728,
           height: 2304,
@@ -90,24 +104,34 @@ export async function POST(req: Request) {
 
     const result = await response.json();
 
-    // Store generation job in database
-    await supabase
+    // Store generation job in database with reference images
+    const { data: generationJob, error: jobError } = await supabase
       .from('generation_jobs')
       .insert({
         user_id: user.id,
         status: 'processing',
         style: packSlug || 'actor-headshots',
         poses: [prompt],
-        replicate_prediction_id: result.id
-      });
+        replicate_prediction_id: result.id,
+        reference_images: userFaceImages, // Store which images were used
+        num_outputs: numOutputs
+      })
+      .select()
+      .single();
+
+    if (jobError) {
+      console.error('Error saving generation job:', jobError);
+    }
 
     return NextResponse.json({
       success: true,
       id: result.id,
+      jobId: generationJob?.id,
       status: result.status,
       urls: result.urls,
-      message: 'Generating professional headshots with DanDan style',
-      estimatedTime: '1-2 minutes'
+      message: `Generating ${numOutputs} professional headshots with Seedream + DanDan style`,
+      estimatedTime: '15-30 seconds',
+      referenceImagesUsed: userFaceImages.length
     });
 
   } catch (error) {

@@ -52,21 +52,21 @@ export async function POST(req: Request) {
 
     console.log(`Webhook received: ${eventType}`, trainingData);
 
-    // Update database when training completes
-    if (eventType === 'training.completed' && trainingData.status === 'succeeded') {
-      const { createClient } = require('@supabase/supabase-js');
-      
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
+    const { createClient } = require('@supabase/supabase-js');
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
+    // Handle training completion
+    if (eventType === 'training.completed' && trainingData.status === 'succeeded') {
       // Find the model by Replicate training ID and update it
       const { error: updateError } = await supabase
         .from('models')
         .update({
           status: 'finished',
-          replicate_model_id: `${trainingData.output.model}`, // Store the trained model ID
+          replicate_model_id: `${trainingData.output.model}`,
           replicate_version_id: trainingData.output.version
         })
         .eq('replicate_training_id', trainingData.id);
@@ -75,6 +75,25 @@ export async function POST(req: Request) {
         console.error('Error updating model:', updateError);
       } else {
         console.log('Model updated with trained model ID:', trainingData.output.model);
+      }
+    }
+
+    // Handle generation completion (Seedream predictions)
+    if (eventType === 'predictions.completed' && trainingData.status === 'succeeded') {
+      // Update generation job with completed images
+      const { error: updateError } = await supabase
+        .from('generation_jobs')
+        .update({
+          status: 'completed',
+          output_images: trainingData.output, // Array of image URLs
+          completed_at: new Date().toISOString()
+        })
+        .eq('replicate_prediction_id', trainingData.id);
+
+      if (updateError) {
+        console.error('Error updating generation job:', updateError);
+      } else {
+        console.log('Generation job completed with images:', trainingData.output);
       }
     }
 
