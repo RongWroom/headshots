@@ -71,14 +71,14 @@ This implementation plan breaks down the ComfyUI headshot generation system into
     - Track success/failure rates
     - _Requirements: 6.1_
 
-- [ ] 4. Create job status polling endpoint
-  - [ ] 4.1 Implement GET /api/headshots/status/:jobId
+- [x] 4. Create job status polling endpoint
+  - [x] 4.1 Implement GET /api/headshots/status/:jobId
     - Validate user authentication
     - Verify user owns the job (user_id matches)
     - Query generation_jobs table for job status
     - Return: { jobId, status, progress, message, images, error, createdAt, completedAt }
     - _Requirements: 5.3, 5.6_
-  - [ ] 4.2 Add caching headers for completed jobs
+  - [x] 4.2 Add caching headers for completed jobs
     - Cache completed jobs for 1 hour
     - No caching for in-progress jobs
     - _Requirements: 5.6_
