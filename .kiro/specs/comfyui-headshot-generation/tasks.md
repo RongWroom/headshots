@@ -83,20 +83,20 @@ This implementation plan breaks down the ComfyUI headshot generation system into
     - No caching for in-progress jobs
     - _Requirements: 5.6_
 
-- [ ] 5. Create webhook endpoint for RunPod callbacks
-  - [ ] 5.1 Implement POST /api/headshots/webhook
+- [x] 5. Create webhook endpoint for RunPod callbacks
+  - [x] 5.1 Implement POST /api/headshots/webhook
     - Validate webhook signature using HMAC
     - Parse webhook payload: { jobId, status, progress, message, images, error }
     - Update generation_jobs table with new status/progress
     - If images provided (base64), upload to Vercel Blob Storage
     - Update job with output_images URLs
     - _Requirements: 5.2, 5.4, 5.5_
-  - [ ] 5.2 Handle webhook retries and idempotency
+  - [x] 5.2 Handle webhook retries and idempotency
     - Store webhook payloads for debugging
     - Handle duplicate webhooks gracefully
     - Implement exponential backoff for failed webhooks
     - _Requirements: 5.5, 7.2_
-  - [ ] 5.3 Add webhook security
+  - [x] 5.3 Add webhook security
     - Validate HMAC signature
     - Rate limit webhook endpoint
     - Only accept from RunPod IPs (optional)
