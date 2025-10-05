@@ -142,8 +142,8 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // Step 2: Face swap each styled image (optional - img2img already preserves face)
-    console.log('Step 2: Optionally enhancing faces with face swap...');
+    // Step 2: Use Seedream to merge styled headshot with your face
+    console.log('Step 2: Merging styled headshots with your face using Seedream...');
 
     const finalImages = [];
 
@@ -152,40 +152,46 @@ export async function POST(req: Request) {
       const currentImage = styledImage[i];
       console.log(`Processing image ${i + 1}/${styledImage.length}`);
 
-      // Try face swap to enhance facial features
       try {
-        const faceSwapResponse = await fetch('https://api.replicate.com/v1/predictions', {
+        // Use Seedream with both the styled image AND your reference photo
+        const seedreamMergeResponse = await fetch('https://api.replicate.com/v1/models/bytedance/seedream-4/predictions', {
           method: 'POST',
           headers: {
             'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            version: 'd5900f9ebed33e7ae6f3a83fd1b13c24d763d26fe1c4b3afef7383ad5d61bcc7',
             input: {
-              target_image: currentImage,
-              swap_image: referenceImages[0]
+              prompt: `A professional headshot portrait in dandan style. The subject is centered with a ${selectedPose}, looking directly at the camera, making eye contact with the viewer, wearing a simple outfit, The background is softly blurred with muted tones, creating a cinematic and sophisticated atmosphere, The lighting is soft and directional, highlighting the subject's facial features, relaxed portrait photography capturing photorealistic skin textures, sharp eyes looking at camera, natural hair color, and subtle shadows, High-quality photography, cinematic lighting, shallow depth of field`,
+              image_input: [currentImage, ...referenceImages], // Styled image + your reference photos
+              size: "2K",
+              width: 1728,
+              height: 2304,
+              aspect_ratio: "3:4",
+              max_images: 1,
+              sequential_image_generation: "disabled",
+              prompt_strength: 0.7 // Balance between style and face
             }
           })
         });
 
-        if (!faceSwapResponse.ok) {
-          const errorData = await faceSwapResponse.json().catch(() => ({}));
-          console.log(`Face swap request failed for image ${i + 1}:`, errorData);
+        if (!seedreamMergeResponse.ok) {
+          const errorData = await seedreamMergeResponse.json().catch(() => ({}));
+          console.log(`Seedream merge failed for image ${i + 1}:`, errorData);
           finalImages.push(currentImage);
           continue;
         }
 
-        const faceSwapResult = await faceSwapResponse.json();
+        const seedreamResult = await seedreamMergeResponse.json();
 
-        // Poll for face swap completion
-        let swappedImage = null;
-        let swapAttempts = 0;
+        // Poll for Seedream completion
+        let mergedImage = null;
+        let mergeAttempts = 0;
 
-        while (swapAttempts < 30) { // 30 seconds max per swap
+        while (mergeAttempts < 60) { // 60 seconds max
           await new Promise(resolve => setTimeout(resolve, 1000));
 
-          const statusResponse = await fetch(faceSwapResult.urls.get, {
+          const statusResponse = await fetch(seedreamResult.urls.get, {
             headers: {
               'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
             }
@@ -194,19 +200,19 @@ export async function POST(req: Request) {
           const status = await statusResponse.json();
 
           if (status.status === 'succeeded') {
-            swappedImage = status.output;
-            console.log(`✅ Face swap succeeded for image ${i + 1}`);
+            mergedImage = status.output[0];
+            console.log(`✅ Seedream merge succeeded for image ${i + 1}`);
             break;
           } else if (status.status === 'failed') {
-            console.log(`❌ Face swap failed for image ${i + 1}:`, status.error);
-            swappedImage = currentImage; // Use styled version if swap fails
+            console.log(`❌ Seedream merge failed for image ${i + 1}:`, status.error);
+            mergedImage = currentImage; // Use styled version if merge fails
             break;
           }
 
-          swapAttempts++;
+          mergeAttempts++;
         }
 
-        finalImages.push(swappedImage || currentImage);
+        finalImages.push(mergedImage || currentImage);
       } catch (error) {
         console.log(`Error processing image ${i + 1}:`, error);
         finalImages.push(currentImage); // Use styled version on error
