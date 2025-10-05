@@ -1,0 +1,17 @@
+# Requirements for custom ComfyUI nodes
+
+# Core dependencies
+torch>=2.0.0
+numpy>=1.24.0
+pillow>=10.0.0
+requests>=2.31.0
+
+# Optional: For Seedream integration via Replicate
+replicate>=0.20.0
+
+# Optional: For production CLIP Interrogator
+# clip-interrogator>=0.6.0
+
+# Optional: For facial feature detection
+# deepface>=0.0.79
+# opencv-python>=4.8.0
