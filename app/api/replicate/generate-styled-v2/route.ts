@@ -161,17 +161,17 @@ export async function POST(req: Request) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            version: 'yan-ops/face-swap:d5900f9ebed33e7ae6f3a83fd1b13c24d763d26fe1c4b3afef7383ad5d61bcc7',
+            version: 'd5900f9ebed33e7ae6f3a83fd1b13c24d763d26fe1c4b3afef7383ad5d61bcc7',
             input: {
               target_image: currentImage,
-              swap_image: referenceImages[0],
-              cache_days: 0
+              swap_image: referenceImages[0]
             }
           })
         });
 
         if (!faceSwapResponse.ok) {
-          console.log(`Face swap failed for image ${i + 1}, using styled version`);
+          const errorData = await faceSwapResponse.json().catch(() => ({}));
+          console.log(`Face swap request failed for image ${i + 1}:`, errorData);
           finalImages.push(currentImage);
           continue;
         }
@@ -195,8 +195,10 @@ export async function POST(req: Request) {
 
           if (status.status === 'succeeded') {
             swappedImage = status.output;
+            console.log(`✅ Face swap succeeded for image ${i + 1}`);
             break;
           } else if (status.status === 'failed') {
+            console.log(`❌ Face swap failed for image ${i + 1}:`, status.error);
             swappedImage = currentImage; // Use styled version if swap fails
             break;
           }
