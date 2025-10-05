@@ -151,19 +151,19 @@ This implementation plan breaks down the ComfyUI headshot generation system into
     - Return images in response payload
     - _Requirements: 4.7, 5.4_
 
-- [ ] 7. Test ComfyUI workflow end-to-end
-  - [ ] 7.1 Test with sample photos locally
+- [x] 7. Test ComfyUI workflow end-to-end
+  - [x] 7.1 Test with sample photos locally
     - Use 5-10 test photos of different people
     - Verify background removal works
     - Verify face analysis is accurate
     - Verify Seedream generates quality images
     - _Requirements: 8.1, 8.2_
-  - [ ] 7.2 Test webhook progress updates
+  - [x] 7.2 Test webhook progress updates
     - Verify webhooks are sent at each stage
     - Verify progress percentages are accurate
     - Verify messages are descriptive
     - _Requirements: 5.2, 5.3_
-  - [ ] 7.3 Test error scenarios
+  - [x] 7.3 Test error scenarios
     - Test with invalid image URLs
     - Test with images without faces
     - Test with NSFW content

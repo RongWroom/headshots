@@ -18,11 +18,11 @@ interface StatusResponse {
 
 export async function GET(
   req: Request,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   const logger = new Logger('HEADSHOTS_STATUS_API');
   
-  const { jobId } = params;
+  const { jobId } = await params;
   
   logger.logInfo('STATUS_REQUEST_START', {
     jobId,
