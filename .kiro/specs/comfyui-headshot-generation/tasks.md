@@ -41,7 +41,7 @@ This implementation plan breaks down the ComfyUI headshot generation system into
     - Add webhook progress updates at each stage
     - Test workflow locally in ComfyUI
     - _Requirements: 3.2, 4.1, 4.2, 4.3_
-  - [ ] 2.4 Deploy serverless endpoint to RunPod
+  - [x] 2.4 Deploy serverless endpoint to RunPod
     - Upload Docker image to RunPod
     - Configure endpoint: GPU type (A40), min_workers (0), max_workers (3), idle_timeout (300s)
     - Set environment variables: WEBHOOK_SECRET, DANDAN_LORA_URL
