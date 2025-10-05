@@ -1,0 +1,49 @@
+{
+  "name": "comfyui-headshot-generator",
+  "description": "Professional AI headshot generation using ComfyUI with DanDan photography style",
+  "version": "1.0.0",
+  "docker_image": "your-registry/comfyui-headshot-generator:latest",
+  "gpu_config": {
+    "gpu_type": "NVIDIA A40",
+    "gpu_count": 1,
+    "min_workers": 0,
+    "max_workers": 3,
+    "idle_timeout": 300,
+    "execution_timeout": 600
+  },
+  "container_config": {
+    "container_disk_size_gb": 20,
+    "ports": [
+      {
+        "container_port": 8188,
+        "protocol": "http"
+      }
+    ]
+  },
+  "environment_variables": {
+    "COMFYUI_PATH": "/workspace/ComfyUI",
+    "PYTHONPATH": "/workspace/ComfyUI",
+    "WEBHOOK_SECRET": "REPLACE_WITH_YOUR_SECRET",
+    "DANDAN_LORA_URL": "REPLACE_WITH_YOUR_LORA_URL"
+  },
+  "scaling": {
+    "scale_up_threshold": 0.8,
+    "scale_down_threshold": 0.2,
+    "cooldown_period": 60
+  },
+  "cost_estimate": {
+    "gpu_cost_per_hour": 0.79,
+    "avg_generation_time_seconds": 90,
+    "cost_per_generation": 0.02,
+    "monthly_cost_100_generations": 2.00,
+    "monthly_cost_1000_generations": 20.00
+  },
+  "notes": [
+    "Set WEBHOOK_SECRET to a secure random string",
+    "Set DANDAN_LORA_URL to your trained LoRA model URL",
+    "Adjust max_workers based on expected load",
+    "Monitor costs and adjust idle_timeout as needed",
+    "A40 GPU recommended for balance of speed and cost",
+    "Consider A100 for faster generation if budget allows"
+  ]
+}

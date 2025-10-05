@@ -1,0 +1,21 @@
+# RunPod and API dependencies
+runpod>=1.5.0
+requests>=2.31.0
+
+# Image processing
+Pillow>=10.0.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+
+# Background removal (for RMBG node)
+rembg>=2.0.50
+onnxruntime>=1.16.0
+
+# CLIP and feature detection
+transformers>=4.35.0
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Additional utilities
+aiohttp>=3.9.0
+websockets>=12.0
