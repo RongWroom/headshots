@@ -359,6 +359,73 @@ export interface Database {
           }
         ]
       }
+      generation_jobs: {
+        Row: {
+          id: string
+          user_id: string
+          status: string
+          progress: number
+          progress_message: string | null
+          reference_images: string[]
+          num_outputs: number
+          style_intensity: number | null
+          output_images: string[] | null
+          detected_features: Json | null
+          generation_time_seconds: number | null
+          estimated_cost_usd: number | null
+          error_message: string | null
+          created_at: string
+          started_at: string | null
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: string
+          progress?: number
+          progress_message?: string | null
+          reference_images: string[]
+          num_outputs?: number
+          style_intensity?: number | null
+          output_images?: string[] | null
+          detected_features?: Json | null
+          generation_time_seconds?: number | null
+          estimated_cost_usd?: number | null
+          error_message?: string | null
+          created_at?: string
+          started_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: string
+          progress?: number
+          progress_message?: string | null
+          reference_images?: string[]
+          num_outputs?: number
+          style_intensity?: number | null
+          output_images?: string[] | null
+          detected_features?: Json | null
+          generation_time_seconds?: number | null
+          estimated_cost_usd?: number | null
+          error_message?: string | null
+          created_at?: string
+          started_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_jobs_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
