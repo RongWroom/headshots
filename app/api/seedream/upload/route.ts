@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { put } from '@vercel/blob';
 import { Logger, extractErrorDetails } from '@/lib/logger';
+import { createErrorResponse, retryBlobUpload } from '@/lib/error-utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -237,11 +238,19 @@ export async function POST(req: Request) {
           size: file.size
         });
 
-        const blob = await put(blobPath, file, {
-          access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN,
-          contentType: file.type,
-        });
+        // Use retry logic for blob upload
+        const blob = await retryBlobUpload(
+          async (path: string) => {
+            return await put(path, file, {
+              access: 'public',
+              token: process.env.BLOB_READ_WRITE_TOKEN,
+              contentType: file.type,
+            });
+          },
+          blobPath,
+          3,
+          logger
+        );
 
         uploadedImages.push({
           filename: file.name,

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { Logger, extractErrorDetails } from '@/lib/logger';
 import { seedreamService } from '@/lib/seedream-service';
 import { getStyleById, buildNegativePrompt, isValidStyleId } from '@/lib/style-catalog';
+import { createErrorResponse as createStandardErrorResponse, classifyError } from '@/lib/error-utils';
 
 export const dynamic = "force-dynamic";
 

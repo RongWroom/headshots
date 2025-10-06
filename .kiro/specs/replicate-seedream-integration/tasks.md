@@ -72,7 +72,7 @@
   - Run lint and type checks after completion
   - _Requirements: 4.3, 4.4, 4.5, 4.6, 8.4_
 
-- [ ] 7. Build status polling API endpoint
+- [x] 7. Build status polling API endpoint
   - Check if similar status endpoints exist in `app/api/headshots/status/` directory
   - Create `/api/seedream/status/[jobId]/route.ts`
   - Verify user owns the job (RLS)
@@ -83,7 +83,7 @@
   - Run lint and type checks after completion
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-- [ ] 8. Create TypeScript types and interfaces
+- [x] 8. Create TypeScript types and interfaces
   - Check existing types in `types/` directory
   - Review `types/supabase.ts` for existing patterns
   - Define `SeedreamUpload` interface
@@ -94,7 +94,7 @@
   - Run lint and type checks after completion
   - _Requirements: All_
 
-- [ ] 9. Implement error handling and retry logic
+- [x] 9. Implement error handling and retry logic
   - Check if `lib/logger.ts` exists for error logging patterns
   - Create retry utility with exponential backoff
   - Handle Replicate rate limits (429)
