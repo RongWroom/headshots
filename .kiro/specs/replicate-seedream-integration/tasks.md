@@ -23,7 +23,7 @@
   - Run lint and type checks after completion
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 3. Implement Replicate Seedream service wrapper
+- [x] 3. Implement Replicate Seedream service wrapper
   - Check existing `lib/replicate.ts` file for reusable code
   - Create `lib/seedream-service.ts` with Replicate SDK integration
   - Implement `createPrediction()` method
@@ -34,7 +34,7 @@
   - Run lint and type checks after completion
   - _Requirements: 2.1, 2.2, 2.7, 7.1, 7.2_
 
-- [ ] 4. Build image upload API endpoint
+- [x] 4. Build image upload API endpoint
   - Check existing API routes in `app/api/` directory for patterns
   - Check if `@vercel/blob` is already installed in package.json
   - Create `/api/seedream/upload` route
@@ -47,7 +47,7 @@
   - Run lint and type checks after completion
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-- [ ] 5. Build generation API endpoint
+- [x] 5. Build generation API endpoint
   - Review existing generation endpoint at `app/api/headshots/generate/route.ts` for patterns
   - Create `/api/seedream/generate` route
   - Fetch upload metadata from Supabase
@@ -59,7 +59,7 @@
   - Run lint and type checks after completion
   - _Requirements: 2.3, 2.4, 2.5, 2.6, 9.4_
 
-- [ ] 6. Implement webhook handler
+- [x] 6. Implement webhook handler
   - Check existing webhook handlers in `app/api/` for signature verification patterns
   - Create `/api/seedream/webhook` route
   - Verify webhook signature using `REPLICATE_WEBHOOK_SECRET`
