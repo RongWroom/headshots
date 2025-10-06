@@ -391,7 +391,15 @@ export async function POST(req: Request) {
     logger.logInfo('WEBHOOK_URL_PREPARED', { webhookUrl });
 
     // Call Replicate API with webhook URL
-    logger.logInfo('REPLICATE_API_CALL_START', { jobId: job.id });
+    logger.logInfo('REPLICATE_API_CALL_START', { 
+      jobId: job.id,
+      imageUrls: imageUrls,
+      imageCount: imageUrls.length,
+      prompt: style.prompt,
+      negativePrompt: negativePrompt,
+      numOutputs: numOutputs,
+      seed: style.seed
+    });
     
     try {
       const prediction = await seedreamService.createPrediction(

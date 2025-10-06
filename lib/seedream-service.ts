@@ -74,15 +74,17 @@ function isRetryableError(error: unknown): boolean {
   return false;
 }
 
-// Input interface for Seedream predictions
+// Input interface for Seedream-4 predictions
 export interface SeedreamInput {
-  image: string | string[]; // Reference image URLs
+  image: string | string[]; // Reference image URLs (will be mapped to image_input)
   prompt: string;
-  negative_prompt?: string;
-  num_outputs?: number;
-  seed?: number;
-  guidance_scale?: number;
-  num_inference_steps?: number;
+  negative_prompt?: string; // Not used by Seedream-4, but kept for compatibility
+  num_outputs?: number; // Will be mapped to max_images (max 4)
+  seed?: number; // Not used by Seedream-4
+  guidance_scale?: number; // Not used by Seedream-4
+  num_inference_steps?: number; // Not used by Seedream-4
+  size?: string; // Seedream-4 specific: "1K" or "2K"
+  aspect_ratio?: string; // Seedream-4 specific: "1:1", "4:3", "16:9", etc.
 }
 
 // Prediction interface
@@ -98,7 +100,19 @@ export interface Prediction {
 
 // Seedream service class
 export class SeedreamService {
-  private readonly modelVersion = 'bytedance/seedream';
+  // NOTE: This is a placeholder model. Seedream by ByteDance may not be publicly available on Replicate.
+  // You need to replace this with an actual working model version hash.
+  // 
+  // Options:
+  // 1. Use a different headshot generation model like:
+  //    - 'lucataco/flux-dev-lora' (for LoRA-based generation)
+  //    - 'stability-ai/sdxl' (for SDXL-based generation)
+  //    - Or any other portrait/headshot model on Replicate
+  //
+  // 2. Get the correct Seedream version hash if you have access
+  //
+  // To find available models, visit: https://replicate.com/explore
+  private readonly modelVersion = process.env.SEEDREAM_MODEL_VERSION || 'bytedance/seedream:latest';
 
   /**
    * Create a new prediction with Seedream model
@@ -109,15 +123,28 @@ export class SeedreamService {
   ): Promise<Prediction> {
     return withRetry(async () => {
       try {
+        // Check if model version is configured
+        if (!this.modelVersion || this.modelVersion === 'bytedance/seedream:latest') {
+          throw new Error(
+            'SEEDREAM_MODEL_VERSION environment variable is not configured. ' +
+            'Please set it to a valid Replicate model version hash. ' +
+            'Visit https://replicate.com/bytedance/seedream to get the correct version hash.'
+          );
+        }
+
+        // Seedream-4 uses different parameter names than standard models
+        // Map our generic parameters to Seedream-4's specific API
+        const imageInput = Array.isArray(input.image) ? input.image : [input.image];
+        const maxImages = Math.min(input.num_outputs || 4, 4); // Seedream-4 max is 4
+
         const options: any = {
           input: {
-            image: input.image,
+            image_input: imageInput, // Seedream-4 uses "image_input" not "image"
             prompt: input.prompt,
-            negative_prompt: input.negative_prompt || '',
-            num_outputs: input.num_outputs || 10,
-            seed: input.seed,
-            guidance_scale: input.guidance_scale || 7.5,
-            num_inference_steps: input.num_inference_steps || 50,
+            max_images: maxImages, // Seedream-4 uses "max_images" not "num_outputs"
+            size: input.size || '2K', // Seedream-4 specific: "1K" or "2K"
+            aspect_ratio: input.aspect_ratio || '1:1', // Seedream-4 specific
+            // Note: Seedream-4 doesn't support negative_prompt, seed, guidance_scale, or num_inference_steps
           },
         };
 
@@ -127,9 +154,26 @@ export class SeedreamService {
           options.webhook_events_filter = ['completed'];
         }
 
+        // Log what we're sending to Replicate
+        console.log('[SEEDREAM_SERVICE] Creating prediction with Seedream-4:', {
+          model: this.modelVersion,
+          imageCount: imageInput.length,
+          imageUrls: imageInput,
+          prompt: input.prompt,
+          max_images: maxImages,
+          size: options.input.size,
+          aspect_ratio: options.input.aspect_ratio,
+          note: 'Seedream-4 does not support negative_prompt, seed, or guidance parameters',
+        });
+
         const prediction = await replicate.predictions.create({
           version: this.modelVersion,
           ...options,
+        });
+
+        console.log('[SEEDREAM_SERVICE] Prediction created:', {
+          id: prediction.id,
+          status: prediction.status,
         });
 
         return this.normalizePrediction(prediction);

@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 2000; // 2 seconds
 
-// Webhook delay threshold: If webhook hasn't arrived after 2 minutes, poll Replicate
-const WEBHOOK_DELAY_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
+// Webhook delay threshold: If webhook hasn't arrived after 30 seconds, poll Replicate
+const WEBHOOK_DELAY_THRESHOLD_MS = 30 * 1000; // 30 seconds
 
 // Job expiration: Jobs older than 24 hours are considered expired
 const JOB_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours

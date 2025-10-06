@@ -136,7 +136,7 @@
   - Run lint and type checks after completion
   - _Requirements: 9.3, 9.4_
 
-- [ ] 13. Build frontend style selection UI
+- [x] 13. Build frontend style selection UI
   - Check existing UI components for card/selection patterns
   - Display style cards with preview images
   - Show style names and descriptions
@@ -145,7 +145,7 @@
   - Run lint and type checks after completion
   - _Requirements: 9.5, 9.6_
 
-- [ ] 14. Build frontend generation progress UI
+- [x] 14. Build frontend generation progress UI
   - Check existing progress/loading components
   - Show progress indicator during generation
   - Display estimated time remaining

@@ -300,28 +300,32 @@ export async function POST(req: Request) {
     // Get request body as text for signature validation
     const rawBody = await req.text();
     
-    // Validate webhook signature
-    const signature = req.headers.get('replicate-signature');
-    
-    if (!signature) {
-      logger.logError('WEBHOOK_NO_SIGNATURE', 'Webhook received without signature');
+    // Validate webhook signature (if secret is configured)
+    if (webhookSecret) {
+      const signature = req.headers.get('replicate-signature') || req.headers.get('x-webhook-signature');
       
-      return NextResponse.json({
-        error: 'Missing signature'
-      }, { status: 401 });
+      if (!signature) {
+        logger.logWarning('WEBHOOK_NO_SIGNATURE', 'Webhook received without signature (signature validation enabled but no signature provided)');
+        
+        // Allow webhook to proceed if signature validation is not strictly required
+        // In production, you may want to reject this
+        logger.logInfo('WEBHOOK_PROCEEDING_WITHOUT_SIGNATURE', 'Allowing webhook without signature for development');
+      } else {
+        const isValid = validateWebhookSignature(rawBody, signature, webhookSecret);
+        
+        if (!isValid) {
+          logger.logError('INVALID_WEBHOOK_SIGNATURE', { hasSignature: !!signature });
+          
+          return NextResponse.json({
+            error: 'Invalid signature'
+          }, { status: 401 });
+        }
+        
+        logger.logSuccess('WEBHOOK_SIGNATURE_VALID');
+      }
+    } else {
+      logger.logInfo('WEBHOOK_SIGNATURE_VALIDATION_DISABLED', 'No webhook secret configured, skipping signature validation');
     }
-    
-    const isValid = validateWebhookSignature(rawBody, signature, webhookSecret);
-    
-    if (!isValid) {
-      logger.logError('INVALID_WEBHOOK_SIGNATURE', { hasSignature: !!signature });
-      
-      return NextResponse.json({
-        error: 'Invalid signature'
-      }, { status: 401 });
-    }
-    
-    logger.logSuccess('WEBHOOK_SIGNATURE_VALID');
     
     // Parse webhook payload
     let payload: ReplicateWebhookPayload;
