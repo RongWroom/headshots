@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { put } from '@vercel/blob';
 import { Logger, extractErrorDetails } from '@/lib/logger';
 import { createErrorResponse, retryBlobUpload } from '@/lib/error-utils';
+import { checkRateLimit, RateLimitPresets, createRateLimitHeaders } from '@/lib/rate-limiter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,6 +108,49 @@ export async function POST(req: Request) {
     const userId = user.id;
     logger.setUserId(userId);
     logger.logSuccess('AUTH_SUCCESS', { userId, userEmail: user.email });
+
+    // Check rate limit (10 uploads per hour per user)
+    logger.logInfo('RATE_LIMIT_CHECK_START');
+    
+    const rateLimit = checkRateLimit(userId, 'upload', RateLimitPresets.UPLOAD);
+    
+    if (!rateLimit.allowed) {
+      const errorResponse = logger.createErrorResponse(
+        'Rate limit exceeded',
+        `You have exceeded the upload limit. Please try again in ${rateLimit.retryAfter} seconds.`,
+        'RATE_LIMIT_EXCEEDED',
+        { 
+          limit: RateLimitPresets.UPLOAD.maxRequests,
+          windowMs: RateLimitPresets.UPLOAD.windowMs,
+          resetAt: rateLimit.resetAt.toISOString(),
+          retryAfter: rateLimit.retryAfter
+        },
+        [
+          `Wait ${rateLimit.retryAfter} seconds before uploading again`,
+          `Upload limit: ${RateLimitPresets.UPLOAD.maxRequests} per hour`,
+          'Consider upgrading your plan for higher limits'
+        ]
+      );
+      
+      logger.logError('RATE_LIMIT_EXCEEDED', {
+        userId,
+        endpoint: 'upload',
+        retryAfter: rateLimit.retryAfter
+      });
+      
+      return NextResponse.json(errorResponse, { 
+        status: 429,
+        headers: {
+          ...authResponse.headers,
+          ...createRateLimitHeaders(rateLimit, RateLimitPresets.UPLOAD)
+        }
+      });
+    }
+    
+    logger.logSuccess('RATE_LIMIT_CHECK_PASSED', {
+      remaining: rateLimit.remaining,
+      resetAt: rateLimit.resetAt.toISOString()
+    });
 
     // Parse multipart form data
     logger.logInfo('FORM_DATA_PARSING_START');
@@ -372,6 +416,12 @@ export async function POST(req: Request) {
     
     // Copy auth cookies to the success response
     for (const [key, value] of authResponse.headers.entries()) {
+      response.headers.set(key, value);
+    }
+    
+    // Add rate limit headers to success response
+    const rateLimitHeaders = createRateLimitHeaders(rateLimit, RateLimitPresets.UPLOAD);
+    for (const [key, value] of Object.entries(rateLimitHeaders)) {
       response.headers.set(key, value);
     }
 

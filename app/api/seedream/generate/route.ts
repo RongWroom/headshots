@@ -5,6 +5,7 @@ import { Logger, extractErrorDetails } from '@/lib/logger';
 import { seedreamService } from '@/lib/seedream-service';
 import { getStyleById, buildNegativePrompt, isValidStyleId } from '@/lib/style-catalog';
 import { createErrorResponse as createStandardErrorResponse, classifyError } from '@/lib/error-utils';
+import { checkRateLimit, RateLimitPresets, createRateLimitHeaders } from '@/lib/rate-limiter';
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,49 @@ export async function POST(req: Request) {
     const userId = user.id;
     logger.setUserId(userId);
     logger.logSuccess('AUTH_SUCCESS', { userId, userEmail: user.email });
+
+    // Check rate limit (5 generations per hour per user)
+    logger.logInfo('RATE_LIMIT_CHECK_START');
+    
+    const rateLimit = checkRateLimit(userId, 'generate', RateLimitPresets.GENERATE);
+    
+    if (!rateLimit.allowed) {
+      const errorResponse = logger.createErrorResponse(
+        'Rate limit exceeded',
+        `You have exceeded the generation limit. Please try again in ${rateLimit.retryAfter} seconds.`,
+        'RATE_LIMIT_EXCEEDED',
+        { 
+          limit: RateLimitPresets.GENERATE.maxRequests,
+          windowMs: RateLimitPresets.GENERATE.windowMs,
+          resetAt: rateLimit.resetAt.toISOString(),
+          retryAfter: rateLimit.retryAfter
+        },
+        [
+          `Wait ${rateLimit.retryAfter} seconds before generating again`,
+          `Generation limit: ${RateLimitPresets.GENERATE.maxRequests} per hour`,
+          'Consider upgrading your plan for higher limits'
+        ]
+      );
+      
+      logger.logError('RATE_LIMIT_EXCEEDED', {
+        userId,
+        endpoint: 'generate',
+        retryAfter: rateLimit.retryAfter
+      });
+      
+      return NextResponse.json(errorResponse, { 
+        status: 429,
+        headers: {
+          ...authResponse.headers,
+          ...createRateLimitHeaders(rateLimit, RateLimitPresets.GENERATE)
+        }
+      });
+    }
+    
+    logger.logSuccess('RATE_LIMIT_CHECK_PASSED', {
+      remaining: rateLimit.remaining,
+      resetAt: rateLimit.resetAt.toISOString()
+    });
 
     // Parse and validate request
     logger.logInfo('REQUEST_PARSING_START');
@@ -443,6 +487,12 @@ export async function POST(req: Request) {
     
     // Copy auth cookies to the success response
     for (const [key, value] of authResponse.headers.entries()) {
+      response.headers.set(key, value);
+    }
+    
+    // Add rate limit headers to success response
+    const rateLimitHeaders = createRateLimitHeaders(rateLimit, RateLimitPresets.GENERATE);
+    for (const [key, value] of Object.entries(rateLimitHeaders)) {
       response.headers.set(key, value);
     }
 
