@@ -426,6 +426,110 @@ export interface Database {
           }
         ]
       }
+      seedream_uploads: {
+        Row: {
+          id: string
+          user_id: string
+          images: Json
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          images: Json
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          images?: Json
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seedream_uploads_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      seedream_jobs: {
+        Row: {
+          id: string
+          user_id: string
+          upload_id: string
+          style_id: string
+          num_outputs: number
+          customizations: Json | null
+          replicate_prediction_id: string | null
+          status: string
+          progress: number
+          error_message: string | null
+          output_images: Json | null
+          generation_time_seconds: number | null
+          estimated_cost_usd: number | null
+          created_at: string
+          started_at: string | null
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          upload_id: string
+          style_id: string
+          num_outputs?: number
+          customizations?: Json | null
+          replicate_prediction_id?: string | null
+          status?: string
+          progress?: number
+          error_message?: string | null
+          output_images?: Json | null
+          generation_time_seconds?: number | null
+          estimated_cost_usd?: number | null
+          created_at?: string
+          started_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          upload_id?: string
+          style_id?: string
+          num_outputs?: number
+          customizations?: Json | null
+          replicate_prediction_id?: string | null
+          status?: string
+          progress?: number
+          error_message?: string | null
+          output_images?: Json | null
+          generation_time_seconds?: number | null
+          estimated_cost_usd?: number | null
+          created_at?: string
+          started_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seedream_jobs_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seedream_jobs_upload_id_fkey"
+            columns: ["upload_id"]
+            referencedRelation: "seedream_uploads"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
