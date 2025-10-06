@@ -358,28 +358,45 @@ export async function POST(req: Request) {
     });
 
     // Store upload metadata in Supabase
-    logger.logInfo('DATABASE_INSERT_START', { uploadId });
+    logger.logInfo('DATABASE_INSERT_START', { uploadId, userId, imageCount: uploadedImages.length });
+    
+    // Ensure images are properly formatted as JSON
+    const imagesJson = uploadedImages.map(img => ({
+      filename: img.filename,
+      blobUrl: img.blobUrl,
+      size: img.size
+    }));
     
     const { data: uploadRecord, error: dbError } = await supabase
       .from('seedream_uploads')
       .insert({
         id: uploadId,
         user_id: userId,
-        images: uploadedImages
+        images: imagesJson as any // Cast to any to satisfy TypeScript, Supabase will handle JSON conversion
       })
       .select()
       .single();
 
     if (dbError || !uploadRecord) {
+      const errorDetails = dbError ? extractErrorDetails(dbError) : { message: 'No record returned' };
+      
       const errorResponse = logger.createErrorResponse(
         'Database error',
         'Failed to save upload metadata',
         'DATABASE_ERROR',
-        { dbError: dbError ? extractErrorDetails(dbError) : 'No record returned' },
+        { 
+          dbError: errorDetails,
+          uploadId,
+          userId
+        },
         ['Try again in a few moments', 'Contact support if the issue persists']
       );
       
-      logger.logError('DATABASE_INSERT_FAILED', dbError);
+      logger.logError('DATABASE_INSERT_FAILED', dbError || new Error('No record returned'), {
+        uploadId,
+        userId,
+        errorDetails
+      });
       
       // TODO: Cleanup uploaded blobs since database insert failed
       
