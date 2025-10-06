@@ -1,25 +1,22 @@
 # Git
 .git
 .gitignore
+.gitattributes
 
 # Documentation
-README.md
 *.md
+!README.md
+!custom_nodes/README.md
 
-# Build scripts
-build-and-deploy.sh
-
-# Python
+# Tests
+test_*.py
+*_test.py
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-.Python
-*.so
-*.egg
-*.egg-info
-dist
-build
+.pytest_cache
+.coverage
 
 # IDE
 .vscode
@@ -32,9 +29,16 @@ build
 .DS_Store
 Thumbs.db
 
+# Python
+*.egg-info
+dist
+build
+*.egg
+
 # Logs
 *.log
 
-# Test files
-test_*.py
-*_test.py
+# Temporary files
+tmp/
+temp/
+*.tmp
